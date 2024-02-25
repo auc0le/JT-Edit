@@ -172,6 +172,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to get the binary component for a specific color
     function getBinaryComponent(color, position) {
+        
+        color = color.toUpperCase();
+
         const colorMap = {
             '#000000': '000',   // Black
             '#FF0000': '001',   // Red
@@ -180,11 +183,11 @@ document.addEventListener('DOMContentLoaded', function () {
             '#0000FF': '100',   // Blue
             '#FF00FF': '101',   // Magenta
             '#00FFFF': '110',   // Cyan
-            '#FFFFFF': '111'    // White
+            '#FFFFFF': '111'    // White'
         };
 
         currentColor = colorMap[color];
-        const binaryValue = currentColor.substring(position,position+1)
+        const binaryValue = currentColor.substring(position,position+1) ?? '0'
 
         return binaryValue
     }
