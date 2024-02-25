@@ -1,0 +1,60 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.icon-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+#colorPicker {
+    display: none; /* Hide color picker initially */
+}
+
+#imageInput {
+    display: none;
+}
+
+#paletteIcon {
+    padding-right: 20px; /* Add padding-right */
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#pixelCanvas {
+    border: 1px solid #000;
+    display: grid;
+    grid-template-columns: repeat(96, 1fr);
+    gap: 1px;
+    padding: 0 15px; /* Added padding */
+    margin-bottom: 15px; /* Added margin-bottom */
+}
+
+#textDisplay {
+    font-family: monospace;
+    white-space: pre-wrap; /* Allow wrapping of text */
+}
+
+.pixel {
+    width: 10px; /* Adjusted pixel size */
+    height: 10px; /* Adjusted pixel size */
+    cursor: pointer;
+}
+
+.fa-palette,
+.fa-folder {
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.icon-group i {
+    cursor: pointer;
+    padding-right: 10px;
+    padding-left: 10px;
+}
+

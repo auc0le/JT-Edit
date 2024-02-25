@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Pixel Toggler</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h2>Color Pixel Toggler</h2>
+    <div class="icon-group">
+        <i id="paletteIcon" class="fas fa-palette" onclick="openColorPicker()"></i>
+        <select id="customColorPicker" onchange="changeColor()">
+            <option value="#FF0000">Red</option>
+            <option value="#00FF00">Green</option>
+            <option value="#0000FF">Blue</option>
+            <option value="#FFFF00">Yellow</option>
+            <option value="#FF00FF">Magenta</option>
+            <option value="#00FFFF">Cyan</option>
+            <option value="#000000">Black</option>
+        </select>
+        <i class="fas fa-folder" onclick="openFileInput()"></i>
+        <input type="file" id="imageInput" accept="image/*">
+        <i class="fas fa-save" onclick="saveToFile()"></i>
+    </div>
+    <div id="pixelCanvas"></div>
+    <pre id="textDisplay"></pre>
+    <script src="app.js"></script>
+    <script src="FileSaver.js"></script>
+</body>
+</html>
