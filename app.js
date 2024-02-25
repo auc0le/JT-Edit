@@ -86,13 +86,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function quantizeColor(red, green, blue) {
         // Define a set of seven predefined colors in 3-bit color space (excluding gray)
         const colors = [
-            [255, 0, 0],    // Red
-            [0, 255, 0],    // Green
-            [0, 0, 255],    // Blue
-            [255, 255, 0],  // Yellow
-            [255, 0, 255],  // Magenta
-            [0, 255, 255],  // Cyan
-            [0, 0, 0]       // Black
+            [255, 0, 0],        // Red
+            [0, 255, 0],        // Green
+            [0, 0, 255],        // Blue
+            [255, 255, 0],      // Yellow
+            [255, 0, 255],      // Magenta
+            [0, 255, 255],      // Cyan
+            [0, 0, 0],          // Black
+            [255, 255, 255]     // White
         ];
 
         // Find the closest color in the predefined set
