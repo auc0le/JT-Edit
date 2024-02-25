@@ -137,9 +137,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             for (let i = 0; i < pixelArray.length; i++) {
                 const color = pixelArray[i][j];
-                const redValue = getBinaryComponent(color, '#FF0000');
-                const greenValue = getBinaryComponent(color, '#00FF00');
-                const blueValue = getBinaryComponent(color, '#0000FF');
+                const redValue = getBinaryComponent(color, 2);
+                const greenValue = getBinaryComponent(color, 1);
+                const blueValue = getBinaryComponent(color, 0);
 
                 redBinary += redValue;
                 greenBinary += greenValue;
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Function to get the binary component for a specific color
-    function getBinaryComponent(color, componentColor) {
+    function getBinaryComponent(color, position) {
         const colorMap = {
             '#000000': '000',   // Black
             '#FF0000': '001',   // Red
@@ -183,7 +183,10 @@ document.addEventListener('DOMContentLoaded', function () {
             '#FFFFFF': '111'    // White
         };
 
-        return colorMap[color] === colorMap[componentColor] ? '1' : '0';
+        currentColor = colorMap[color];
+        const binaryValue = currentColor.substring(position,position+1)
+
+        return binaryValue
     }
 
     // Function to convert hex to RGB
