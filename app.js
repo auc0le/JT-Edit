@@ -126,26 +126,64 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to update text display below canvas with binary representation of 3-bit color space
     function updateTextDisplay() {
         const rowLength = pixelArray[0].length;
-        let binaryArray = [];
+        let redBinaryArray = [];
+        let greenBinaryArray = [];
+        let blueBinaryArray = [];
 
         for (let j = 0; j < rowLength; j++) {
-            let binaryString = '';
+            let redBinary = '';
+            let greenBinary = '';
+            let blueBinary = '';
+
             for (let i = 0; i < pixelArray.length; i++) {
                 const color = pixelArray[i][j];
-                const binaryValue = color === '#000000' ? '0' : '1';
-                binaryString += binaryValue;
+                const redValue = getBinaryComponent(color, '#FF0000');
+                const greenValue = getBinaryComponent(color, '#00FF00');
+                const blueValue = getBinaryComponent(color, '#0000FF');
+
+                redBinary += redValue;
+                greenBinary += greenValue;
+                blueBinary += blueValue;
 
                 // Group every 8 bits and convert to decimal
-                if (binaryString.length === 8) {
-                    binaryArray.push(parseInt(binaryString, 2));
-                    binaryString = '';
+                if (redBinary.length === 8) {
+                    redBinaryArray.push(parseInt(redBinary, 2));
+                    redBinary = '';
+                }
+
+                if (greenBinary.length === 8) {
+                    greenBinaryArray.push(parseInt(greenBinary, 2));
+                    greenBinary = '';
+                }
+
+                if (blueBinary.length === 8) {
+                    blueBinaryArray.push(parseInt(blueBinary, 2));
+                    blueBinary = '';
                 }
             }
         }
 
-        const decimalText = `Decimal: [${binaryArray.join(', ')}]`;
+        const redDecimalText = `Red: [${redBinaryArray.join(', ')}]`;
+        const greenDecimalText = `Green: [${greenBinaryArray.join(', ')}]`;
+        const blueDecimalText = `Blue: [${blueBinaryArray.join(', ')}]`;
 
-        textDisplay.textContent = decimalText;
+        textDisplay.textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
+    }
+
+    // Function to get the binary component for a specific color
+    function getBinaryComponent(color, componentColor) {
+        const colorMap = {
+            '#000000': '000',   // Black
+            '#FF0000': '001',   // Red
+            '#00FF00': '010',   // Green
+            '#FFFF00': '011',   // Yellow
+            '#0000FF': '100',   // Blue
+            '#FF00FF': '101',   // Magenta
+            '#00FFFF': '110',   // Cyan
+            '#FFFFFF': '111'    // White
+        };
+
+        return colorMap[color] === colorMap[componentColor] ? '1' : '0';
     }
 
     // Function to convert hex to RGB

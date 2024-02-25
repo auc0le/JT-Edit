@@ -20,6 +20,10 @@ body {
     display: none;
 }
 
+#arrayOutput {
+    padding: 20px;
+}
+
 #paletteIcon {
     padding-right: 20px; /* Add padding-right */
     font-size: 24px;
