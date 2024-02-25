@@ -130,6 +130,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to update text display below canvas with binary representation of 3-bit color space
     function updateTextDisplay() {
+
+        // reset these b/c they are global and shared with file output
+        redBinaryArray = [];
+        greenBinaryArray = [];
+        blueBinaryArray = [];
+
         const rowLength = pixelArray[0].length;
 
         for (let j = 0; j < rowLength; j++) {
