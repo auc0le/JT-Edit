@@ -1,9 +1,14 @@
+let redBinaryArray = [];
+let greenBinaryArray = [];
+let blueBinaryArray = [];
+
 document.addEventListener('DOMContentLoaded', function () {
     const canvas = document.getElementById('pixelCanvas');
     const textDisplay = document.getElementById('textDisplay');
     const customColorPicker = document.getElementById('customColorPicker');
     const paletteIcon = document.getElementById('paletteIcon');
     const imageInput = document.getElementById('imageInput');
+
     let selectedColor = customColorPicker.value; // Set default color to the first option
 
     // Event listener for custom color picker change
@@ -126,9 +131,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to update text display below canvas with binary representation of 3-bit color space
     function updateTextDisplay() {
         const rowLength = pixelArray[0].length;
-        let redBinaryArray = [];
-        let greenBinaryArray = [];
-        let blueBinaryArray = [];
 
         for (let j = 0; j < rowLength; j++) {
             let redBinary = '';
@@ -183,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '#0000FF': '100',   // Blue
             '#FF00FF': '101',   // Magenta
             '#00FFFF': '110',   // Cyan
-            '#FFFFFF': '111'    // White'
+            '#FFFFFF': '111'    // White
         };
 
         currentColor = colorMap[color];
