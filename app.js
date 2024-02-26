@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePaletteIconColor();
     });
 
+    // Event listener for size dropdown change
+    document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
+
+    // Event listener for pixel size input change
+    document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+
     // Event listener for file input change
     imageInput.addEventListener('change', function (event) {
         const file = event.target.files[0];
@@ -111,28 +117,59 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
 
-
-
-    // Function to draw pixels on canvas
+    // Function to draw pixels on the canvas
     function drawPixels() {
-        canvas.innerHTML = ''; // Clear the canvas
+        const pixelCanvas = document.getElementById("pixelCanvas");
+        pixelCanvas.innerHTML = ""; // Clear previous pixels
+
+        const sizeDropdown = document.getElementById("sizeDropdown");
+        const selectedSize = sizeDropdown.value;
+        const [height, width] = selectedSize.split("x").map(Number);
+
+        const pixelSizeInput = document.getElementById("pixelSizeInput");
+        const pixelSize = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
+
+
+        // Calculate the width of each pixel based on the container size and array width
+        const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;                
+
+        pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
 
         pixelArray.forEach((row, rowIndex) => {
             row.forEach((color, columnIndex) => {
-                const pixel = document.createElement('div');
-                pixel.className = 'pixel';
+                const pixel = document.createElement("div");
+                pixel.className = "pixel";
                 pixel.style.backgroundColor = color;
+                pixel.style.width = `${pixelSize}px`;
+                pixel.style.height = `${pixelSize}px`;
+
+                // Add click event listener for pixel editing
                 pixel.addEventListener('click', () => togglePixel(rowIndex, columnIndex));
-                canvas.appendChild(pixel);
+
+                pixelCanvas.appendChild(pixel);
             });
+
         });
 
         updateTextDisplay();
     }
 
+
     // Function to toggle pixel color
     function togglePixel(row, col) {
         pixelArray[row][col] = selectedColor;
+        drawPixels();
+        updateTextDisplay();
+    }
+
+    // Function to handle size change
+    function handleSizeChange() {
+        const sizeDropdown = document.getElementById("sizeDropdown");
+        const selectedSize = sizeDropdown.value;
+        const [width, height] = selectedSize.split("x").map(Number);
+
+        // Update your pixel array and canvas size here
+        pixelArray = createPixelArray(width, height);
         drawPixels();
         updateTextDisplay();
     }

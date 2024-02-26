@@ -13,9 +13,24 @@
 <body>
     <h2>JT Edit - For CoolLED1248</h2>
     <div class="icon-group">
+      <label for="sizeDropdown">LED Size:</label>
+        <select id="sizeDropdown">
+            <option value="16x32">16x32</option>
+            <option value="16x64">16x64</option>
+            <option value="16x96" selected>16x96</option>
+            <option value="16x128">16x128</option>
+            <option value="16x192">16x192</option>
+            <option value="32x128">32x128</option>
+            <option value="32x160">32x160</option>
+            <option value="32x192">32x192</option>
+        </select>        
+
+        <label for="pixelSizeInput">Pixel Size:</label>
+        <input type="number" id="pixelSizeInput" min="1" value="8" max="20">
+
         <i id="paletteIcon" class="fas fa-palette" ></i>
         <select id="customColorPicker">
-            <option value="#FF0000">Red</option>
+            <option value="#FF0000" selected>Red</option>
             <option value="#00FF00">Green</option>
             <option value="#0000FF">Blue</option>
             <option value="#FFFF00">Yellow</option>
@@ -28,7 +43,9 @@
         <input type="file" id="imageInput" accept="image/*">
         <i class="fas fa-save" onclick="saveToFile()"></i>
     </div>
-    <div id="pixelCanvas"></div>
+    <div id="pixelCanvasContainer">
+        <div id="pixelCanvas"></div>
+    </div>
     
     <div id="arrayOutput">
         <pre id="textDisplay"></pre>

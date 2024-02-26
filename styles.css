@@ -12,10 +12,6 @@ body {
     margin-bottom: 15px;
 }
 
-#colorPicker {
-    display: none; /* Hide color picker initially */
-}
-
 #imageInput {
     display: none;
 }
@@ -25,7 +21,6 @@ body {
 }
 
 #paletteIcon {
-    padding-right: 20px; /* Add padding-right */
     font-size: 24px;
     cursor: pointer;
 }
@@ -45,10 +40,13 @@ body {
 }
 
 .pixel {
-    width: 10px; /* Adjusted pixel size */
-    height: 10px; /* Adjusted pixel size */
+    width: 8px; /* Adjusted pixel size */
+    height: 8px; /* Adjusted pixel size */
     cursor: pointer;
+    display: inline-block;  /* Display pixels in a row */
+    box-sizing: border-box;
 }
+
 
 .fa-palette,
 .fa-folder {
