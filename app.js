@@ -56,6 +56,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return pixelArray;
     }
 
+    // Function to toggle the debug text display
+    function toggleDebugDisplay() {
+        const textDisplay = document.getElementById("textDisplay");
+        textDisplay.style.display = (textDisplay.style.display === "none") ? "block" : "none";
+
+        // Toggle the color of the bug/debug icon
+        const debugToggleIcon = document.getElementById("debugToggle");
+        const isDebugVisible = textDisplay.style.display === "block";
+        debugToggleIcon.style.color = isDebugVisible ? "green" : "black";
+    }
+
+    // Event listener for bug/debug icon click
+    document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
+
 
     // Function to load pixel array from image
     function loadPixelArrayFromImage(img) {

@@ -60,3 +60,8 @@ body {
     padding-left: 10px;
 }
 
+#debugToggle {
+    cursor: pointer;
+    margin-left: 10px;
+    color: black;
+}
