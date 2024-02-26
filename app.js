@@ -82,28 +82,36 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTextDisplay();
     }
 
-    // Function to quantize color to 3-bit color space
-    function quantizeColor(red, green, blue) {
-        // Define a set of seven predefined colors in 3-bit color space (excluding gray)
-        const colors = [
-            [255, 0, 0],        // Red
-            [0, 255, 0],        // Green
-            [0, 0, 255],        // Blue
-            [255, 255, 0],      // Yellow
-            [255, 0, 255],      // Magenta
-            [0, 255, 255],      // Cyan
-            [0, 0, 0],          // Black
-            [255, 255, 255]     // White
-        ];
+        // Function to quantize color to 3-bit color space using Euclidean distance
+        function quantizeColor(red, green, blue) {
+            // Define a set of eight predefined colors in 3-bit color space
+            const colors = [
+                [255, 0, 0],    // Red
+                [0, 255, 0],    // Green
+                [0, 0, 255],    // Blue
+                [255, 255, 0],  // Yellow
+                [255, 0, 255],  // Magenta
+                [0, 255, 255],  // Cyan
+                [255, 255, 255],// White
+                [0, 0, 0]       // Black
+            ];
 
-        // Find the closest color in the predefined set
-        const closestColor = colors.reduce((closest, color) => {
-            const distance = Math.abs(red - color[0]) + Math.abs(green - color[1]) + Math.abs(blue - color[2]);
-            return distance < closest.distance ? { color, distance } : closest;
-        }, { color: null, distance: Infinity }).color;
+            // Find the nearest color in the predefined set using Euclidean distance
+            const nearestColor = colors.reduce((nearest, color) => {
+                const distance = Math.sqrt(
+                    Math.pow(red - color[0], 2) +
+                    Math.pow(green - color[1], 2) +
+                    Math.pow(blue - color[2], 2)
+                );
 
-        return rgbToHex(...closestColor);
-    }
+                return distance < nearest.distance ? { color, distance } : nearest;
+            }, { color: null, distance: Infinity }).color;
+
+            return rgbToHex(...nearestColor);
+        }
+
+
+
 
     // Function to draw pixels on canvas
     function drawPixels() {
