@@ -25,6 +25,12 @@
             <option value="32x192">32x192</option>
         </select>        
 
+        <label for="modeDropdown">Mode:</label>
+        <select id="modeDropdown">
+            <option value="static" selected>Static</option>
+            <option value="animation">Animation</option>
+        </select>
+
         <label for="pixelSizeInput">Pixel Size:</label>
         <input type="number" id="pixelSizeInput" min="1" value="8" max="20">
 
@@ -47,7 +53,15 @@
     <div id="pixelCanvasContainer">
         <div id="pixelCanvas"></div>
     </div>
-    
+
+    <div id="controlButtons">
+        <button id="backButton"><i class="fas fa-step-backward"></i></button>
+        <button id="playPauseButton"><i class="fas fa-play"></i>/<i class="fas fa-pause"></i></button>
+        <button id="forwardButton"><i class="fas fa-step-forward"></i></button>
+        <button id="plusButton"><i class="fas fa-plus"></i></button>
+        <span id="frameDisplay">Frame: <span id="currentFrame">1</span>/<span id="totalFrames">1</span></span>
+    </div>
+
     <div id="arrayOutput">
         <pre id="textDisplay" style="display: none;"></pre>
     </div>

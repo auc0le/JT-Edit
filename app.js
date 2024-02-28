@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const imageInput = document.getElementById('imageInput');
 
     let selectedColor = customColorPicker.value; // Set default color to the first option
+    let currentMode = "static"; // Default mode
+    let isPlaying = false; // Variable to track animation state
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function () {
@@ -17,11 +19,53 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePaletteIconColor();
     });
 
+    // Function to handle button clicks
+    function handleButtonClick(buttonId) {
+        switch (buttonId) {
+            case "backButton":
+                // Handle back button click
+                break;
+            case "playPauseButton":
+                // Handle play/pause button click
+                isPlaying = !isPlaying;
+                break;
+            case "forwardButton":
+                // Handle forward button click
+                break;
+            case "plusButton":
+                // Handle + button click
+                break;
+            default:
+                break;
+        }
+    }
+
+    document.getElementById("backButton").addEventListener("click", () => handleButtonClick("backButton"));
+    document.getElementById("playPauseButton").addEventListener("click", () => handleButtonClick("playPauseButton"));
+    document.getElementById("forwardButton").addEventListener("click", () => handleButtonClick("forwardButton"));
+    document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
+
     // Event listener for size dropdown change
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
 
     // Event listener for pixel size input change
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+
+    // Function to handle mode change
+    function handleModeChange() {
+        const modeDropdown = document.getElementById("modeDropdown");
+        currentMode = modeDropdown.value;
+
+        // Toggle the visibility of the control buttons based on the mode
+        const controlButtons = document.getElementById("controlButtons");
+        controlButtons.style.display = currentMode === "animation" ? "flex" : "none";
+    }
+
+    // Event listener for mode dropdown change
+    document.getElementById("modeDropdown").addEventListener("change", () => {
+        handleModeChange();
+        drawPixels(); // Redraw pixels when mode changes
+    });
 
     // Event listener for file input change
     imageInput.addEventListener('change', function (event) {
@@ -291,5 +335,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize with default color
     updatePaletteIconColor();
+    handleModeChange();
     drawPixels();
 });

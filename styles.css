@@ -69,3 +69,7 @@ body {
 #pixelSizeInput {
     width: 40px;
 }
+
+#controlButtons {
+    display: none;
+}
