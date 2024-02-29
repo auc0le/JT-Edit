@@ -24,103 +24,235 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentMode = "static"; // Default mode
     let isPlaying = false; // Variable to track animation state    
 
+    // --- Event Listeners for GUI ---
+
+        // Function to handle button clicks
+        function handleButtonClick(buttonId) {
+            switch (buttonId) {
+                case "backButton":
+                    // Handle back button click
+                    break;
+                case "playPauseButton":
+                    // Handle play/pause button click
+                    isPlaying = !isPlaying;
+                    break;
+                case "forwardButton":
+                    // Handle forward button click
+                    break;
+                case "plusButton":
+                    // Handle + button click
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Function to handle format change
+        function handleFormatChange() {
+            const formatDropdown = document.getElementById("formatDropdown");
+            selectedFormat = formatDropdown.value;
+
+        }
+
+        // Function to handle paint bucket button click
+        function handlePaintBucket() {
+
+            // Set all pixels in the current array to the selected color
+            pixelArray = createPixelArray(pixelWidth, pixelHeight);
+            drawPixels();
+            updateTextDisplay();
+
+        }
+
+        // Function to handle mode change
+        function handleModeChange() {
+            const modeDropdown = document.getElementById("modeDropdown");
+            currentMode = modeDropdown.value;
+
+            // Toggle the visibility of the control buttons based on the mode
+            const controlButtons = document.getElementById("controlButtons");
+            controlButtons.style.display = currentMode === "animation" ? "flex" : "none";
+        }
+
+        // Event listener for mode dropdown change
+        document.getElementById("modeDropdown").addEventListener("change", () => {
+            handleModeChange();
+            drawPixels(); // Redraw pixels when mode changes
+        });
+
+        // Event listener for file input change
+        imageInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        loadPixelArrayFromImage(img);
+                        drawPixels();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Event listener for palette icon click
+        paletteIcon.addEventListener('click', function() {
+            openColorPicker();
+        });
+
+        // Function to handle size change
+        function handleSizeChange() {
+            const sizeDropdown      = document.getElementById("sizeDropdown");
+            const selectedSize      = sizeDropdown.value;
+            const [width, height]   = selectedSize.split("x").map(Number);
+
+            pixelHeight             = height;
+            pixelWidth              = width;
+
+            // Set the selected format based on the size
+            selectedFormat = selectedSize === "16x64" ? "v2" : "v1";
+            Array.from(formatDropdown.options).forEach((option) => {
+                option.selected = option.value === selectedFormat;
+            });
+
+            // Update your pixel array and canvas size here
+            pixelArray = createPixelArray(width, height);
+            drawPixels();
+            updateTextDisplay();
+        }
+
+        // Function to toggle pixel color
+        function togglePixel(row, col) {
+            pixelArray[row][col] = selectedColor;
+            drawPixels();
+            updateTextDisplay();
+        }
+
+        // Function to toggle the debug text display
+        function toggleDebugDisplay() {
+            const textDisplay = document.getElementById("textDisplay");
+            textDisplay.style.display = (textDisplay.style.display === "none") ? "block" : "none";
+
+            // Toggle the color of the bug/debug icon
+            const debugToggleIcon = document.getElementById("debugToggle");
+            const isDebugVisible = textDisplay.style.display === "block";
+            debugToggleIcon.style.color = isDebugVisible ? "green" : "black";
+        }
+
+
+        // Function to update palette icon color
+        function updatePaletteIconColor() {
+            paletteIcon.style.color = selectedColor;
+        }
+
+        // Function to open color picker
+        window.openColorPicker = function() {
+            customColorPicker.click();
+        };
+
+
+    // --- End Event Listeners for GUI ---
+
+    // --- Binding of event listeners ---
+    document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
+    document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+    document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
         selectedColor = customColorPicker.value;
         updatePaletteIconColor();
     });
 
-    // Function to handle button clicks
-    function handleButtonClick(buttonId) {
-        switch (buttonId) {
-            case "backButton":
-                // Handle back button click
-                break;
-            case "playPauseButton":
-                // Handle play/pause button click
-                isPlaying = !isPlaying;
-                break;
-            case "forwardButton":
-                // Handle forward button click
-                break;
-            case "plusButton":
-                // Handle + button click
-                break;
-            default:
-                break;
-        }
-    }
+    document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
+    document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
 
-    // Function to handle format change
-    function handleFormatChange() {
-        const formatDropdown = document.getElementById("formatDropdown");
-        selectedFormat = formatDropdown.value;
-
-    }
+    // Function to open file input
+    window.openFileInput = function() {
+        imageInput.click();
+    };
 
     document.getElementById("backButton").addEventListener("click", () => handleButtonClick("backButton"));
     document.getElementById("playPauseButton").addEventListener("click", () => handleButtonClick("playPauseButton"));
     document.getElementById("forwardButton").addEventListener("click", () => handleButtonClick("forwardButton"));
     document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
 
-    document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
-    document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+    // --- End Binding of event listeners ---
 
-    document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
+    // --- Image Utility functions ---
+      // Function to get the binary component for a specific color
+        function getBinaryComponent(color, position) {
 
-    document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+            color = color.toUpperCase();
 
-    // Function to handle paint bucket button click
-    function handlePaintBucket() {
-
-        // Set all pixels in the current array to the selected color
-        pixelArray = createPixelArray(pixelWidth, pixelHeight);
-        drawPixels();
-        updateTextDisplay();
-
-    }
-
-
-    // Function to handle mode change
-    function handleModeChange() {
-        const modeDropdown = document.getElementById("modeDropdown");
-        currentMode = modeDropdown.value;
-
-        // Toggle the visibility of the control buttons based on the mode
-        const controlButtons = document.getElementById("controlButtons");
-        controlButtons.style.display = currentMode === "animation" ? "flex" : "none";
-    }
-
-    // Event listener for mode dropdown change
-    document.getElementById("modeDropdown").addEventListener("change", () => {
-        handleModeChange();
-        drawPixels(); // Redraw pixels when mode changes
-    });
-
-    // Event listener for file input change
-    imageInput.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    loadPixelArrayFromImage(img);
-                    drawPixels();
-                };
-                img.src = e.target.result;
+            const colorMap = {
+                '#000000': '000', // Black
+                '#FF0000': '001', // Red
+                '#00FF00': '010', // Green
+                '#FFFF00': '011', // Yellow
+                '#0000FF': '100', // Blue
+                '#FF00FF': '101', // Magenta
+                '#00FFFF': '110', // Cyan
+                '#FFFFFF': '111' // White
             };
-            reader.readAsDataURL(file);
+
+            currentColor = colorMap[color];
+            const binaryValue = currentColor.substring(position, position + 1) ?? '0'
+
+            return binaryValue
         }
-    });
 
-    // Event listener for palette icon click
-    paletteIcon.addEventListener('click', function() {
-        openColorPicker();
-    });
+        // Function to convert hex to RGB
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16);
+            const red = (bigint >> 16) & 255;
+            const green = (bigint >> 8) & 255;
+            const blue = bigint & 255;
+            return [red, green, blue];
+        }
 
-    let pixelArray = createPixelArray(96, 16); // Create pixel array
+        // Function to convert RGB to hex
+        function rgbToHex(r, g, b) {
+            return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+        }
+
+        // Function to quantize color to 3-bit color space using Euclidean distance
+        function quantizeColor(red, green, blue) {
+            // Define a set of eight predefined colors in 3-bit color space
+            const colors = [
+                [255, 0, 0], // Red
+                [0, 255, 0], // Green
+                [0, 0, 255], // Blue
+                [255, 255, 0], // Yellow
+                [255, 0, 255], // Magenta
+                [0, 255, 255], // Cyan
+                [255, 255, 255], // White
+                [0, 0, 0] // Black
+            ];
+
+            // Find the nearest color in the predefined set using Euclidean distance
+            const nearestColor = colors.reduce((nearest, color) => {
+                const distance = Math.sqrt(
+                    Math.pow(red - color[0], 2) +
+                    Math.pow(green - color[1], 2) +
+                    Math.pow(blue - color[2], 2)
+                );
+
+                return distance < nearest.distance ? {
+                    color,
+                    distance
+                } : nearest;
+            }, {
+                color: null,
+                distance: Infinity
+            }).color;
+
+            return rgbToHex(...nearestColor);
+        }
+    // --- End Image Utility functions ---
 
     // Function to create pixel array with default color
     function createPixelArray(width, height) {
@@ -133,21 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         return pixelArray;
     }
-
-    // Function to toggle the debug text display
-    function toggleDebugDisplay() {
-        const textDisplay = document.getElementById("textDisplay");
-        textDisplay.style.display = (textDisplay.style.display === "none") ? "block" : "none";
-
-        // Toggle the color of the bug/debug icon
-        const debugToggleIcon = document.getElementById("debugToggle");
-        const isDebugVisible = textDisplay.style.display === "block";
-        debugToggleIcon.style.color = isDebugVisible ? "green" : "black";
-    }
-
-    // Event listener for bug/debug icon click
-    document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
-
 
     // Function to load pixel array from image
     function loadPixelArrayFromImage(img) {
@@ -179,41 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
         drawPixels();
         updateTextDisplay();
     }
-
-    // Function to quantize color to 3-bit color space using Euclidean distance
-    function quantizeColor(red, green, blue) {
-        // Define a set of eight predefined colors in 3-bit color space
-        const colors = [
-            [255, 0, 0], // Red
-            [0, 255, 0], // Green
-            [0, 0, 255], // Blue
-            [255, 255, 0], // Yellow
-            [255, 0, 255], // Magenta
-            [0, 255, 255], // Cyan
-            [255, 255, 255], // White
-            [0, 0, 0] // Black
-        ];
-
-        // Find the nearest color in the predefined set using Euclidean distance
-        const nearestColor = colors.reduce((nearest, color) => {
-            const distance = Math.sqrt(
-                Math.pow(red - color[0], 2) +
-                Math.pow(green - color[1], 2) +
-                Math.pow(blue - color[2], 2)
-            );
-
-            return distance < nearest.distance ? {
-                color,
-                distance
-            } : nearest;
-        }, {
-            color: null,
-            distance: Infinity
-        }).color;
-
-        return rgbToHex(...nearestColor);
-    }
-
 
     // Function to draw pixels on the canvas
     function drawPixels() {
@@ -250,35 +332,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         });
 
-        updateTextDisplay();
-    }
-
-
-    // Function to toggle pixel color
-    function togglePixel(row, col) {
-        pixelArray[row][col] = selectedColor;
-        drawPixels();
-        updateTextDisplay();
-    }
-
-    // Function to handle size change
-    function handleSizeChange() {
-        const sizeDropdown      = document.getElementById("sizeDropdown");
-        const selectedSize      = sizeDropdown.value;
-        const [width, height]   = selectedSize.split("x").map(Number);
-
-        pixelHeight             = height;
-        pixelWidth              = width;
-
-        // Set the selected format based on the size
-        selectedFormat = selectedSize === "16x64" ? "v2" : "v1";
-        Array.from(formatDropdown.options).forEach((option) => {
-            option.selected = option.value === selectedFormat;
-        });
-
-        // Update your pixel array and canvas size here
-        pixelArray = createPixelArray(width, height);
-        drawPixels();
         updateTextDisplay();
     }
 
@@ -332,58 +385,8 @@ document.addEventListener('DOMContentLoaded', function() {
         textDisplay.textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
     }
 
-    // Function to get the binary component for a specific color
-    function getBinaryComponent(color, position) {
-
-        color = color.toUpperCase();
-
-        const colorMap = {
-            '#000000': '000', // Black
-            '#FF0000': '001', // Red
-            '#00FF00': '010', // Green
-            '#FFFF00': '011', // Yellow
-            '#0000FF': '100', // Blue
-            '#FF00FF': '101', // Magenta
-            '#00FFFF': '110', // Cyan
-            '#FFFFFF': '111' // White
-        };
-
-        currentColor = colorMap[color];
-        const binaryValue = currentColor.substring(position, position + 1) ?? '0'
-
-        return binaryValue
-    }
-
-    // Function to convert hex to RGB
-    function hexToRgb(hex) {
-        const bigint = parseInt(hex.slice(1), 16);
-        const red = (bigint >> 16) & 255;
-        const green = (bigint >> 8) & 255;
-        const blue = bigint & 255;
-        return [red, green, blue];
-    }
-
-    // Function to convert RGB to hex
-    function rgbToHex(r, g, b) {
-        return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
-    }
-
-    // Function to update palette icon color
-    function updatePaletteIconColor() {
-        paletteIcon.style.color = selectedColor;
-    }
-
-    // Function to open color picker
-    window.openColorPicker = function() {
-        customColorPicker.click();
-    };
-
-    // Function to open file input
-    window.openFileInput = function() {
-        imageInput.click();
-    };
-
-    // Initialize with default color
+    // Initialize the GUI
+    let pixelArray = createPixelArray(96, 16); // Create pixel array
     updatePaletteIconColor();
     handleModeChange();
     drawPixels();
