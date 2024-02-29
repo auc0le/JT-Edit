@@ -1,8 +1,19 @@
-let redBinaryArray = [];
-let greenBinaryArray = [];
-let blueBinaryArray = [];
+// global vars for GUI
+let redBinaryArray      = [];
+let greenBinaryArray    = [];
+let blueBinaryArray     = [];
+let selectedFormat      = "v1"; 
+let selectedSize        = "16x96";
 
-document.addEventListener('DOMContentLoaded', function () {
+// global vars for file JSON data
+let speed           = 255;
+let mode            = 1;
+let pixelHeight     = 16;
+let pixelWidth      = 96;
+let stayTime        = 3;
+let graffitiType    = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
     const textDisplay = document.getElementById('textDisplay');
     const customColorPicker = document.getElementById('customColorPicker');
@@ -11,10 +22,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let selectedColor = customColorPicker.value; // Set default color to the first option
     let currentMode = "static"; // Default mode
-    let isPlaying = false; // Variable to track animation state
+    let isPlaying = false; // Variable to track animation state    
 
     // Event listener for custom color picker change
-    customColorPicker.addEventListener('change', function () {
+    customColorPicker.addEventListener('change', function() {
         selectedColor = customColorPicker.value;
         updatePaletteIconColor();
     });
@@ -40,16 +51,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Function to handle format change
+    function handleFormatChange() {
+        const formatDropdown = document.getElementById("formatDropdown");
+        selectedFormat = formatDropdown.value;
+
+    }
+
     document.getElementById("backButton").addEventListener("click", () => handleButtonClick("backButton"));
     document.getElementById("playPauseButton").addEventListener("click", () => handleButtonClick("playPauseButton"));
     document.getElementById("forwardButton").addEventListener("click", () => handleButtonClick("forwardButton"));
     document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
 
-    // Event listener for size dropdown change
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
-
-    // Event listener for pixel size input change
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+
+    document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
+
+    document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+
+    // Function to handle paint bucket button click
+    function handlePaintBucket() {
+
+        // Set all pixels in the current array to the selected color
+        pixelArray = createPixelArray(pixelWidth, pixelHeight);
+        drawPixels();
+        updateTextDisplay();
+
+    }
+
 
     // Function to handle mode change
     function handleModeChange() {
@@ -68,14 +98,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Event listener for file input change
-    imageInput.addEventListener('change', function (event) {
+    imageInput.addEventListener('change', function(event) {
         const file = event.target.files[0];
 
         if (file) {
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = function(e) {
                 const img = new Image();
-                img.onload = function () {
+                img.onload = function() {
                     loadPixelArrayFromImage(img);
                     drawPixels();
                 };
@@ -86,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Event listener for palette icon click
-    paletteIcon.addEventListener('click', function () {
+    paletteIcon.addEventListener('click', function() {
         openColorPicker();
     });
 
@@ -94,8 +124,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to create pixel array with default color
     function createPixelArray(width, height) {
-        const pixelArray = Array.from({ length: height }, () =>
-            Array.from({ length: width }, () => selectedColor) // Initialize with default color
+        const pixelArray = Array.from({
+                length: height
+            }, () =>
+            Array.from({
+                length: width
+            }, () => selectedColor) // Initialize with default color
         );
         return pixelArray;
     }
@@ -146,60 +180,67 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTextDisplay();
     }
 
-        // Function to quantize color to 3-bit color space using Euclidean distance
-        function quantizeColor(red, green, blue) {
-            // Define a set of eight predefined colors in 3-bit color space
-            const colors = [
-                [255, 0, 0],    // Red
-                [0, 255, 0],    // Green
-                [0, 0, 255],    // Blue
-                [255, 255, 0],  // Yellow
-                [255, 0, 255],  // Magenta
-                [0, 255, 255],  // Cyan
-                [255, 255, 255],// White
-                [0, 0, 0]       // Black
-            ];
+    // Function to quantize color to 3-bit color space using Euclidean distance
+    function quantizeColor(red, green, blue) {
+        // Define a set of eight predefined colors in 3-bit color space
+        const colors = [
+            [255, 0, 0], // Red
+            [0, 255, 0], // Green
+            [0, 0, 255], // Blue
+            [255, 255, 0], // Yellow
+            [255, 0, 255], // Magenta
+            [0, 255, 255], // Cyan
+            [255, 255, 255], // White
+            [0, 0, 0] // Black
+        ];
 
-            // Find the nearest color in the predefined set using Euclidean distance
-            const nearestColor = colors.reduce((nearest, color) => {
-                const distance = Math.sqrt(
-                    Math.pow(red - color[0], 2) +
-                    Math.pow(green - color[1], 2) +
-                    Math.pow(blue - color[2], 2)
-                );
+        // Find the nearest color in the predefined set using Euclidean distance
+        const nearestColor = colors.reduce((nearest, color) => {
+            const distance = Math.sqrt(
+                Math.pow(red - color[0], 2) +
+                Math.pow(green - color[1], 2) +
+                Math.pow(blue - color[2], 2)
+            );
 
-                return distance < nearest.distance ? { color, distance } : nearest;
-            }, { color: null, distance: Infinity }).color;
+            return distance < nearest.distance ? {
+                color,
+                distance
+            } : nearest;
+        }, {
+            color: null,
+            distance: Infinity
+        }).color;
 
-            return rgbToHex(...nearestColor);
-        }
+        return rgbToHex(...nearestColor);
+    }
 
 
     // Function to draw pixels on the canvas
     function drawPixels() {
-        const pixelCanvas = document.getElementById("pixelCanvas");
-        pixelCanvas.innerHTML = ""; // Clear previous pixels
+        const pixelCanvas       = document.getElementById("pixelCanvas");
+        pixelCanvas.innerHTML   = ""; // Clear previous pixels
 
-        const sizeDropdown = document.getElementById("sizeDropdown");
-        const selectedSize = sizeDropdown.value;
-        const [height, width] = selectedSize.split("x").map(Number);
-
-        const pixelSizeInput = document.getElementById("pixelSizeInput");
-        const pixelSize = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
-
+        const sizeDropdown      = document.getElementById("sizeDropdown");
+        selectedSize            = sizeDropdown.value;
+        const [height, width]   = selectedSize.split("x").map(Number);
+        pixelHeight             = height;
+        pixelWidth              = width;
+        
+        const pixelSizeInput    = document.getElementById("pixelSizeInput");
+        const pixelSize         = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
 
         // Calculate the width of each pixel based on the container size and array width
-        const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;                
+        const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;
 
         pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
 
         pixelArray.forEach((row, rowIndex) => {
             row.forEach((color, columnIndex) => {
-                const pixel = document.createElement("div");
-                pixel.className = "pixel";
+                const pixel                 = document.createElement("div");
+                pixel.className             = "pixel";
                 pixel.style.backgroundColor = color;
-                pixel.style.width = `${pixelSize}px`;
-                pixel.style.height = `${pixelSize}px`;
+                pixel.style.width           = `${pixelSize}px`;
+                pixel.style.height          = `${pixelSize}px`;
 
                 // Add click event listener for pixel editing
                 pixel.addEventListener('click', () => togglePixel(rowIndex, columnIndex));
@@ -222,9 +263,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to handle size change
     function handleSizeChange() {
-        const sizeDropdown = document.getElementById("sizeDropdown");
-        const selectedSize = sizeDropdown.value;
-        const [width, height] = selectedSize.split("x").map(Number);
+        const sizeDropdown      = document.getElementById("sizeDropdown");
+        const selectedSize      = sizeDropdown.value;
+        const [width, height]   = selectedSize.split("x").map(Number);
+
+        pixelHeight             = height;
+        pixelWidth              = width;
+
+        // Set the selected format based on the size
+        selectedFormat = selectedSize === "16x64" ? "v2" : "v1";
+        Array.from(formatDropdown.options).forEach((option) => {
+            option.selected = option.value === selectedFormat;
+        });
 
         // Update your pixel array and canvas size here
         pixelArray = createPixelArray(width, height);
@@ -284,22 +334,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to get the binary component for a specific color
     function getBinaryComponent(color, position) {
-        
+
         color = color.toUpperCase();
 
         const colorMap = {
-            '#000000': '000',   // Black
-            '#FF0000': '001',   // Red
-            '#00FF00': '010',   // Green
-            '#FFFF00': '011',   // Yellow
-            '#0000FF': '100',   // Blue
-            '#FF00FF': '101',   // Magenta
-            '#00FFFF': '110',   // Cyan
-            '#FFFFFF': '111'    // White
+            '#000000': '000', // Black
+            '#FF0000': '001', // Red
+            '#00FF00': '010', // Green
+            '#FFFF00': '011', // Yellow
+            '#0000FF': '100', // Blue
+            '#FF00FF': '101', // Magenta
+            '#00FFFF': '110', // Cyan
+            '#FFFFFF': '111' // White
         };
 
         currentColor = colorMap[color];
-        const binaryValue = currentColor.substring(position,position+1) ?? '0'
+        const binaryValue = currentColor.substring(position, position + 1) ?? '0'
 
         return binaryValue
     }
@@ -324,12 +374,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Function to open color picker
-    window.openColorPicker = function () {
+    window.openColorPicker = function() {
         customColorPicker.click();
     };
 
     // Function to open file input
-    window.openFileInput = function () {
+    window.openFileInput = function() {
         imageInput.click();
     };
 
