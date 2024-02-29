@@ -11,20 +11,31 @@
     // Function to generate JSON data for .jt file
     function generateJsonData() {
 
-        let graffitiDataArray = [...redBinaryArray, ...greenBinaryArray, ...blueBinaryArray];
+        let graffitiDataArray = [...redBinaryArray.flat(), ...greenBinaryArray.flat(), ...blueBinaryArray.flat()];
         let jsonData = "";
 
         if (selectedFormat == "v1") {
-            // Generate JSON data with the specified format
-            jsonData = {
-                graffitiData:   graffitiDataArray,
-                graffitiType:   graffitiType,
-                mode:           mode,
-                pixelHeight:    pixelHeight,
-                pixelWidth:     pixelWidth,
-                speed:          speed,
-                stayTime:       stayTime
-            };
+
+            if (currentMode == "static") {
+                jsonData = {
+                    graffitiData:   graffitiDataArray,
+                    graffitiType:   graffitiType,
+                    mode:           mode,
+                    pixelHeight:    pixelHeight,
+                    pixelWidth:     pixelWidth,
+                    speed:          speed,
+                    stayTime:       stayTime
+                };
+            } else if (currentMode = "Animation") {
+                jsonData = {
+                    aniData:        graffitiDataArray,
+                    aniType:        aniType,
+                    delays:         delays,
+                    frameNum:       totalFrames,  
+                    pixelHeight:    pixelHeight,
+                    pixelWidth:     pixelWidth
+                };
+            }
 
         } else if (selectedFormat == "v2") {
             // Generate JSON data with the specified format
@@ -41,7 +52,7 @@
 
         return [{
             data: jsonData,
-            dataType: 1
+            dataType: dataType
         }];
 
     }

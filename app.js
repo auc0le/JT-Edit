@@ -1,9 +1,15 @@
 // global vars for GUI
-let redBinaryArray      = [];
-let greenBinaryArray    = [];
-let blueBinaryArray     = [];
+let redBinaryArray      = [[]];
+let greenBinaryArray    = [[]];
+let blueBinaryArray     = [[]];
 let selectedFormat      = "v1"; 
 let selectedSize        = "16x96";
+
+// global vars for animation logic
+let currentMode = "static";
+let pixelArrayFrames = [[]];
+let currentFrameIndex = 0;
+let totalFrames = 1;
 
 // global vars for file JSON data
 let speed           = 255;
@@ -12,6 +18,9 @@ let pixelHeight     = 16;
 let pixelWidth      = 96;
 let stayTime        = 3;
 let graffitiType    = 1;
+let aniType         = 1;
+let delays          = 250;
+let dataType        = 1; // default to static
 
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
@@ -20,8 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const paletteIcon = document.getElementById('paletteIcon');
     const imageInput = document.getElementById('imageInput');
 
-    let selectedColor = customColorPicker.value; // Set default color to the first option
-    let currentMode = "static"; // Default mode
+    let selectedColor = customColorPicker.value; // Set default color to the first option    
     let isPlaying = false; // Variable to track animation state    
 
     // --- Event Listeners for GUI ---
@@ -31,19 +39,34 @@ document.addEventListener('DOMContentLoaded', function() {
             switch (buttonId) {
                 case "backButton":
                     // Handle back button click
+                    currentFrameIndex = Math.max(0, currentFrameIndex - 1);
                     break;
                 case "playPauseButton":
                     // Handle play/pause button click
                     isPlaying = !isPlaying;
+                    if (isPlaying) {
+                        playAnimation();
+                    }
                     break;
                 case "forwardButton":
                     // Handle forward button click
+                    currentFrameIndex = Math.min(totalFrames - 1, currentFrameIndex + 1);
                     break;
                 case "plusButton":
-                    // Handle + button click
+                    // Handle plus button click
+                    if (currentMode === "animation") {
+                        addFrame();
+                    }
                     break;
                 default:
                     break;
+            }
+
+            // Update frame display after button click
+            updateFrameDisplay();
+            // Redraw pixels if in animation mode
+            if (currentMode === "animation") {
+                drawPixels();
             }
         }
 
@@ -58,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function handlePaintBucket() {
 
             // Set all pixels in the current array to the selected color
-            pixelArray = createPixelArray(pixelWidth, pixelHeight);
+            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelWidth, pixelHeight);
             drawPixels();
             updateTextDisplay();
 
@@ -72,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Toggle the visibility of the control buttons based on the mode
             const controlButtons = document.getElementById("controlButtons");
             controlButtons.style.display = currentMode === "animation" ? "flex" : "none";
+            dataType = currentMode === "animation" ? 0 : 1; // 0 = animation, 1 = static
         }
 
         // Event listener for mode dropdown change
@@ -119,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Update your pixel array and canvas size here
-            pixelArray = createPixelArray(width, height);
+            pixelArrayFrames[currentFrameIndex] = createPixelArray(width, height);
             drawPixels();
             updateTextDisplay();
         }
@@ -185,7 +209,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Image Utility functions ---
       // Function to get the binary component for a specific color
         function getBinaryComponent(color, position) {
-
             color = color.toUpperCase();
 
             const colorMap = {
@@ -256,14 +279,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to create pixel array with default color
     function createPixelArray(width, height) {
-        const pixelArray = Array.from({
+        const NewPixelArray = Array.from({
                 length: height
             }, () =>
             Array.from({
                 length: width
             }, () => selectedColor) // Initialize with default color
         );
-        return pixelArray;
+        return NewPixelArray;
     }
 
     // Function to load pixel array from image
@@ -276,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tempCtx.drawImage(img, 0, 0, img.width, img.height);
 
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
-        pixelArray = createPixelArray(img.width, img.height);
+        pixelArrayFrames[currentFrameIndex] = createPixelArray(img.width, img.height);
 
         let dataIndex = 0;
         for (let y = 0; y < img.height; y++) {
@@ -316,6 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
 
+        pixelArray = pixelArrayFrames[currentFrameIndex];
+
         pixelArray.forEach((row, rowIndex) => {
             row.forEach((color, columnIndex) => {
                 const pixel                 = document.createElement("div");
@@ -338,55 +363,100 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update text display below canvas with binary representation of 3-bit color space
     function updateTextDisplay() {
 
-        // reset these b/c they are global and shared with file output
-        redBinaryArray = [];
-        greenBinaryArray = [];
-        blueBinaryArray = [];
+            pixelArray = pixelArrayFrames[currentFrameIndex];
 
-        const rowLength = pixelArray[0].length;
+            redBinaryArray[currentFrameIndex] =[];
+            greenBinaryArray[currentFrameIndex] = [];
+            blueBinaryArray[currentFrameIndex] = [];
 
-        for (let j = 0; j < rowLength; j++) {
-            let redBinary = '';
-            let greenBinary = '';
-            let blueBinary = '';
+            const rowLength = pixelArray[0].length;
 
-            for (let i = 0; i < pixelArray.length; i++) {
-                const color = pixelArray[i][j];
-                const redValue = getBinaryComponent(color, 2);
-                const greenValue = getBinaryComponent(color, 1);
-                const blueValue = getBinaryComponent(color, 0);
+            for (let j = 0; j < rowLength; j++) {
+                let redBinary = '';
+                let greenBinary = '';
+                let blueBinary = '';
 
-                redBinary += redValue;
-                greenBinary += greenValue;
-                blueBinary += blueValue;
+                for (let i = 0; i < pixelArray.length; i++) {
+                    const color = pixelArray[i][j];
+                    const redValue = getBinaryComponent(color, 2);
+                    const greenValue = getBinaryComponent(color, 1);
+                    const blueValue = getBinaryComponent(color, 0);
 
-                // Group every 8 bits and convert to decimal
-                if (redBinary.length === 8) {
-                    redBinaryArray.push(parseInt(redBinary, 2));
-                    redBinary = '';
+                    redBinary += redValue;
+                    greenBinary += greenValue;
+                    blueBinary += blueValue;
+
+                    // Group every 8 bits and convert to decimal
+                    if (redBinary.length === 8) {
+                        redBinaryArray[currentFrameIndex].push(parseInt(redBinary, 2));
+                        redBinary = '';
+                    }
+
+                    if (greenBinary.length === 8) {
+                        greenBinaryArray[currentFrameIndex].push(parseInt(greenBinary, 2));
+                        greenBinary = '';
+                    }
+
+                    if (blueBinary.length === 8) {
+                        blueBinaryArray[currentFrameIndex].push(parseInt(blueBinary, 2));
+                        blueBinary = '';
+                    }
                 }
+            } // rowLength
 
-                if (greenBinary.length === 8) {
-                    greenBinaryArray.push(parseInt(greenBinary, 2));
-                    greenBinary = '';
-                }
-
-                if (blueBinary.length === 8) {
-                    blueBinaryArray.push(parseInt(blueBinary, 2));
-                    blueBinary = '';
-                }
-            }
-        }
-
-        const redDecimalText = `Red: [${redBinaryArray.join(', ')}]`;
-        const greenDecimalText = `Green: [${greenBinaryArray.join(', ')}]`;
-        const blueDecimalText = `Blue: [${blueBinaryArray.join(', ')}]`;
+        const redDecimalText    = `Red: [${redBinaryArray[currentFrameIndex].join(', ')}]`;
+        const greenDecimalText  = `Green: [${greenBinaryArray[currentFrameIndex].join(', ')}]`;
+        const blueDecimalText   = `Blue: [${blueBinaryArray[currentFrameIndex].join(', ')}]`;
 
         textDisplay.textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
     }
 
+    // --- Animation functions ---
+        // Function to add a frame
+        function addFrame() {
+
+            const NewPixelArray = createPixelArray(pixelWidth, pixelHeight);
+
+            pixelArrayFrames.push(NewPixelArray);   
+            totalFrames = pixelArrayFrames.length;
+            currentFrameIndex = totalFrames - 1; // Set current frame to the newly added frame
+
+            newBinaryArray = Array(pixelWidth * pixelHeight).fill(0);
+
+            redBinaryArray.push(newBinaryArray);
+            greenBinaryArray.push(newBinaryArray);
+            blueBinaryArray.push(newBinaryArray);
+
+        }    
+
+        // Function to update frame display
+        function updateFrameDisplay() {
+            const currentFrameSpan = document.getElementById("currentFrame");
+            const totalFramesSpan = document.getElementById("totalFrames");
+            currentFrameSpan.textContent = currentFrameIndex + 1;
+            totalFramesSpan.textContent = totalFrames;
+        }    
+
+        // Function to play the animation
+        function playAnimation() {
+            const interval = 500; // Adjust the interval as needed (in milliseconds)
+
+            function animate() {
+                if (isPlaying) {
+                    currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
+                    drawPixels();
+                    updateFrameDisplay();
+                    setTimeout(animate, interval);
+                }
+            }
+
+            animate();
+        }
+
+    // --- End Animation functions ---
+
     // Initialize the GUI
-    let pixelArray = createPixelArray(96, 16); // Create pixel array
+    pixelArrayFrames[0] = createPixelArray(96, 16); // Create pixel array
     updatePaletteIconColor();
     handleModeChange();
     drawPixels();
