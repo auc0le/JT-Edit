@@ -38,16 +38,28 @@
             }
 
         } else if (selectedFormat == "v2") {
-            // Generate JSON data with the specified format
-            jsonData = {
-                speed:          speed,
-                mode:           mode,
-                pixelHeight:    pixelHeight,
-                stayTime:       stayTime,
-                graffitiData:   graffitiDataArray,
-                pixelWidth:     pixelWidth,
-                graffitiType:   graffitiType
-            };
+            
+            if (currentMode == "static") {
+                jsonData = {
+                    speed:          speed,
+                    mode:           mode,
+                    pixelHeight:    pixelHeight,
+                    stayTime:       stayTime,
+                    graffitiData:   graffitiDataArray,
+                    pixelWidth:     pixelWidth,
+                    graffitiType:   graffitiType
+                };
+            } else if (currentMode = "Animation") {
+                jsonData = {
+                    pixelWidth:     pixelWidth,
+                    aniData:        graffitiDataArray,
+                    frameNum:       totalFrames,  
+                    delays:         delays,
+                    aniType:        aniType,
+                    pixelHeight:    pixelHeight
+                    
+                };                
+            }
         }
 
         return [{
