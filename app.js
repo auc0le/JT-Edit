@@ -107,7 +107,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Event listener for file input change
         imageInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
-
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -297,8 +296,11 @@ document.addEventListener('DOMContentLoaded', function() {
         tempCanvas.height = img.height;
 
         tempCtx.drawImage(img, 0, 0, img.width, img.height);
-
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+
+        pixelArrayFrames = [[]];
+        currentFrameIndex = 0;
+        totalFrames = 1;
         pixelArrayFrames[currentFrameIndex] = createPixelArray(img.width, img.height);
 
         let dataIndex = 0;
@@ -309,13 +311,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const blue = imageData[dataIndex + 2];
 
                 // Convert to 3-bit color space
-                const quantizedColor = quantizeColor(red, green, blue);
+                const quantizedColor = quantizeColor(red, green, blue);            
                 pixelArray[y][x] = quantizedColor;
-
                 dataIndex += 4; // Move to the next pixel in the image data (RGBA format)
             }
         }
 
+        pixelArrayFrames[currentFrameIndex] = pixelArray;
         drawPixels();
         updateTextDisplay();
     }
@@ -345,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.forEach((color, columnIndex) => {
                 const pixel                 = document.createElement("div");
                 pixel.className             = "pixel";
-                pixel.style.backgroundColor = color;
+                pixel.style.backgroundColor = color;                
                 pixel.style.width           = `${pixelSize}px`;
                 pixel.style.height          = `${pixelSize}px`;
 
