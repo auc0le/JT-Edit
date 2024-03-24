@@ -9,6 +9,5 @@ In the samples folder, You can use the sample jpg and sample color table to edit
 Todo:
 1. Add support for importing / reading JT files.
 2. Improve the color mapping for opening files down to 3 bit color.
-3. Add support for animations.
 
 Please contribute any changes you make on your system by sending a pull request!
