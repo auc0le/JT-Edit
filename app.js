@@ -22,6 +22,7 @@ let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
 
+
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
     const textDisplay = document.getElementById('textDisplay');
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Event Listeners for GUI ---
 
-        // Function to handle button clicks
+        // Function to handle play/pause/next button clicks
         function handleButtonClick(buttonId) {
             switch (buttonId) {
                 case "backButton":
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // clone and directional buttons
         document.getElementById('cloneFrameButton').addEventListener('click', function() {
             copyCurrentFrameToEnd();
             updateFrameDisplay();
@@ -103,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
 
-        // Function to handle format change
+        // Function to handle v1 vs v2 format change
         function handleFormatChange() {
             const formatDropdown = document.getElementById("formatDropdown");
             selectedFormat = formatDropdown.value;
@@ -120,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
-        // Function to handle mode change
+        // Function to handle animation vs static mode change
         function handleModeChange() {
             const modeDropdown = document.getElementById("modeDropdown");
             currentMode = modeDropdown.value;
@@ -619,7 +621,7 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
             }
         }
 
-        // Function to update frame display
+        // Function to update frame display / frame count
         function updateFrameDisplay() {
             const currentFrameSpan = document.getElementById("currentFrame");
             const totalFramesSpan = document.getElementById("totalFrames");
