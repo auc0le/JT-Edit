@@ -53,7 +53,7 @@
             </select>
 
             <i class="fas fa-folder" onclick="openFileInput()"></i>
-            <input type="file" id="imageInput" accept="image/*">
+            <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt">
 
             <i class="fas fa-save" onclick="saveToFile()"></i>
 
@@ -75,7 +75,15 @@
             <button id="playPauseButton"><i class="fas fa-play"></i>/<i class="fas fa-pause"></i></button>
             <button id="forwardButton"><i class="fas fa-step-forward"></i></button>
             <button id="plusButton"><i class="fas fa-plus"></i></button>
+             <button id="cloneFrameButton" title="Clone Frame"><i class="fas fa-clone"></i></button>
             <span id="frameDisplay">Frame: <span id="currentFrame">1</span>/<span id="totalFrames">1</span></span>
+        </div>
+
+        <div id="directionButtons">
+            <button id="upButton" title="Shift Up"><i class="fas fa-arrow-up"></i></button>
+            <button id="leftButton" title="Shift Left"><i class="fas fa-arrow-left"></i></button>
+            <button id="downButton" title="Shift Down"><i class="fas fa-arrow-down"></i></button>
+            <button id="rightButton" title="Shift Right"><i class="fas fa-arrow-right"></i></button>
         </div>
 
         <div id="arrayOutput">

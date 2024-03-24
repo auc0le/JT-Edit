@@ -64,11 +64,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update frame display after button click
             updateFrameDisplay();
+            updateTextDisplay();
             // Redraw pixels if in animation mode
             if (currentMode === "animation") {
                 drawPixels();
             }
         }
+
+        document.getElementById('cloneFrameButton').addEventListener('click', function() {
+            copyCurrentFrameToEnd();
+            updateFrameDisplay();
+            drawPixels();
+            updateTextDisplay();
+        });
+
+        document.getElementById('upButton').addEventListener('click', function() {
+            shiftImageUp();
+            drawPixels();
+            updateTextDisplay();
+        });
+
+        document.getElementById('leftButton').addEventListener('click', function() {
+            shiftImageLeft();
+            drawPixels();
+            updateTextDisplay();
+        });
+
+        document.getElementById('downButton').addEventListener('click', function() {
+            shiftImageDown();
+            drawPixels();
+            updateTextDisplay();
+        });
+
+        document.getElementById('rightButton').addEventListener('click', function() {
+            shiftImageRight();
+            drawPixels();
+            updateTextDisplay();
+        });
+
 
         // Function to handle format change
         function handleFormatChange() {
@@ -105,19 +138,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Event listener for file input change
-        imageInput.addEventListener('change', function(event) {
+        imageInput.addEventListener('change', function (event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        loadPixelArrayFromImage(img);
+                reader.onload = function (e) {
+                    if (file.type === 'image/jpeg' || file.type === 'image/png') {
+                        const img = new Image();
+                        img.onload = function () {
+                            loadPixelArrayFromImage(img);
+                            drawPixels();
+                        };
+                        img.src = e.target.result;
+                    } else if (file.name.endsWith('.jt')) {
+                        // If the file is a .JT file
+                        loadPixelArrayFromJTFile(e.target.result);
                         drawPixels();
-                    };
-                    img.src = e.target.result;
+                    } else {
+                        console.error('Unsupported file type');
+                    }
                 };
-                reader.readAsDataURL(file);
+
+                if (file.name.endsWith('.jt')) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsDataURL(file);
+                }
             }
         });
 
@@ -274,6 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             return rgbToHex(...nearestColor);
         }
+     
     // --- End Image Utility functions ---
 
     // Function to create pixel array with default color
@@ -287,6 +334,88 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         return NewPixelArray;
     }
+
+ // Function to load pixel array from .JT file
+function loadPixelArrayFromJTFile(data) {
+    try {
+        const jsonDataString = data.trim().replace(/^\[|\]$/g, '');
+        const jsonData = JSON.parse(jsonDataString);
+
+        // Check the data type
+        dataType = jsonData.dataType;
+        
+        if (dataType === 0 && jsonData.data.aniData) {
+            console.log("animation JT file");
+            currentMode = 'animation';
+            totalFrames = jsonData.data.frameNum;
+            console.log("totalFrames " + totalFrames);
+
+            // Populate pixelArrayFrames with each frame
+            pixelArrayFrames = jsonData.data.aniData.map(frameData => {
+                return frameData.pixelArray.map(row => row.map(value => Number(value)));
+            });
+        } else if (dataType === 1 && jsonData.data.graffitiData) {
+            console.log("static JT file");
+            currentMode = 'static';
+            totalFrames = 1;
+
+            pixelHeight     = jsonData.data.pixelHeight;
+            pixelWidth      = jsonData.datapixelWidth;
+
+            pixelArrayFrames = convertJTDataToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);
+            console.log(pixelArrayFrames);
+
+        } else {
+            console.error('Unsupported data type');
+        }
+
+        updateGUIMode();
+        drawPixels();
+        updateTextDisplay();
+
+    } catch (error) {
+        console.error('Error loading .JT file:', error);
+    }
+}
+
+// Function to update GUI based on the current mode
+function updateGUIMode() {
+    // Adjust the GUI elements based on the current mode
+    // For example, show/hide play buttons, update dropdown options, etc.
+}
+
+function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
+    const pixelArrayFrames = [];
+    const pixelsPerFrame = pixelWidth * pixelHeight;
+    const totalPixels = pixelsPerFrame * totalFrames;
+
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        const frameStartIndex = frameIndex * pixelsPerFrame * 3;
+        const pixelArray = [];
+
+        for (let i = 0; i < pixelHeight; i++) {
+            const row = [];
+            for (let j = 0; j < pixelWidth; j++) {
+                const pixelIndex = i * pixelWidth + j;
+                const redIndex = frameStartIndex + pixelIndex;
+                const greenIndex = frameStartIndex + pixelIndex + totalPixels; // Offset for green values
+                const blueIndex = frameStartIndex + pixelIndex + totalPixels * 2; // Offset for blue values
+
+                const red = jtData[redIndex];
+                const green = jtData[greenIndex];
+                const blue = jtData[blueIndex];
+                
+                const hexColor = rgbToHex(red, green, blue);
+                row.push(hexColor);
+            }
+            pixelArray.push(row);
+        }
+        pixelArrayFrames.push(pixelArray);
+    }
+    return pixelArrayFrames;
+}
+
+
 
     // Function to load pixel array from image
     function loadPixelArrayFromImage(img) {
@@ -422,14 +551,73 @@ document.addEventListener('DOMContentLoaded', function() {
             pixelArrayFrames.push(NewPixelArray);   
             totalFrames = pixelArrayFrames.length;
             currentFrameIndex = totalFrames - 1; // Set current frame to the newly added frame
-
-            newBinaryArray = Array(pixelWidth * pixelHeight).fill(0);
-
-            redBinaryArray.push(newBinaryArray);
-            greenBinaryArray.push(newBinaryArray);
-            blueBinaryArray.push(newBinaryArray);
-
         }    
+        // Function to clone the current frame and put at the end
+        function copyCurrentFrameToEnd() {
+            if (pixelArrayFrames && pixelArrayFrames.length > 0 && currentFrameIndex >= 0) {
+                const currentFrame = pixelArrayFrames[currentFrameIndex];
+                const newFrame = JSON.parse(JSON.stringify(currentFrame));
+                pixelArrayFrames.push(newFrame);
+
+                totalFrames = pixelArrayFrames.length;
+                currentFrameIndex = totalFrames - 1; // Set current frame to the newly added frame
+
+            } else {
+                console.error("No frame selected or frames array is empty.");
+            }
+        }
+
+        function shiftImageUp() {
+            if (pixelArrayFrames && pixelArrayFrames.length > 0 && currentFrameIndex >= 0) {
+                const currentFrame = pixelArrayFrames[currentFrameIndex];
+                const firstRow = currentFrame.shift();
+                currentFrame.push(firstRow);
+
+            } else {
+                console.error("No frame selected or pixelArrayFrames is empty.");
+            }
+        }
+
+        function shiftImageLeft() {
+            if (pixelArrayFrames && pixelArrayFrames.length > 0 && currentFrameIndex >= 0) {
+                const currentFrame = pixelArrayFrames[currentFrameIndex];
+                const numberOfRows = currentFrame.length;
+                const numberOfColumns = currentFrame[0].length;
+
+                for (let row = 0; row < numberOfRows; row++) {
+                    const firstElement = currentFrame[row].shift();
+                    currentFrame[row].push(firstElement);
+                }
+            } else {
+                console.error("No frame selected or pixelArrayFrames is empty.");
+            }
+        }
+
+        function shiftImageDown() {
+            if (pixelArrayFrames && pixelArrayFrames.length > 0 && currentFrameIndex >= 0) {
+                const currentFrame = pixelArrayFrames[currentFrameIndex];    
+                const lastRow = currentFrame.pop();
+         
+                currentFrame.unshift(lastRow);
+
+            } else {
+                console.error("No frame selected or pixelArrayFrames is empty.");
+            }
+        }
+
+        function shiftImageRight() {
+            if (pixelArrayFrames && pixelArrayFrames.length > 0 && currentFrameIndex >= 0) {
+                const currentFrame = pixelArrayFrames[currentFrameIndex];
+                const numberOfRows = currentFrame.length;
+
+                for (let row = 0; row < numberOfRows; row++) {
+                    const lastElement = currentFrame[row].pop();
+                    currentFrame[row].unshift(lastElement);
+                }
+            } else {
+                console.error("No frame selected or pixelArrayFrames is empty.");
+            }
+        }
 
         // Function to update frame display
         function updateFrameDisplay() {

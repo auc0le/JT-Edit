@@ -73,3 +73,26 @@ body {
 #controlButtons {
     display: none;
 }
+
+#directionButtons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#directionButtons button {
+    background-color: #f0f0f0; /* Light grey background */
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#directionButtons button:hover {
+    background-color: #e0e0e0; /* Slightly darker grey on hover */
+}
+
+#frameDisplay {
+    padding-left: 10px;
+}
