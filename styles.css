@@ -74,14 +74,14 @@ body {
     display: none;
 }
 
-#directionButtons {
+#directionButtons, #controlButtons {
     display: flex;
     justify-content: center;
     gap: 10px;
     margin-top: 10px;
 }
 
-#directionButtons button {
+#directionButtons button, #controlButtons button {
     background-color: #f0f0f0; /* Light grey background */
     border: none;
     padding: 10px;
@@ -89,7 +89,7 @@ body {
     cursor: pointer;
 }
 
-#directionButtons button:hover {
+#directionButtons button:hover, #controlButtons button:hover {
     background-color: #e0e0e0; /* Slightly darker grey on hover */
 }
 
