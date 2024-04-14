@@ -353,16 +353,28 @@ function loadPixelArrayFromJTFile(data) {
             console.log("totalFrames " + totalFrames);
 
             // Populate pixelArrayFrames with each frame
-            pixelArrayFrames = jsonData.data.aniData.map(frameData => {
-                return frameData.pixelArray.map(row => row.map(value => Number(value)));
-            });
+            //ken change############################################################
+            pixelHeight     = jsonData.data.pixelHeight;
+            pixelWidth      = jsonData.data.pixelWidth;
+            pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
+            //convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
+
+            //console.log(pixelArrayFrames);
+            //pixelArrayFrames = jsonData.data.aniData.map(frameData => {
+            //    return frameData.pixelArray.map(row => row.map(value => Number(value)));
+            //});
+            //ken change############################################################
+
         } else if (dataType === 1 && jsonData.data.graffitiData) {
             console.log("static JT file");
             currentMode = 'static';
             totalFrames = 1;
 
             pixelHeight     = jsonData.data.pixelHeight;
-            pixelWidth      = jsonData.datapixelWidth;
+            //ken change############################################################
+            //pixelWidth      = jsonData.datapixelWidth; //dot missing on original code
+            pixelWidth      = jsonData.data.pixelWidth;
+            //ken change############################################################
 
             pixelArrayFrames = convertJTDataToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);
             console.log(pixelArrayFrames);
@@ -652,4 +664,116 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
     updatePaletteIconColor();
     handleModeChange();
     drawPixels();
+init();
 });
+
+
+//ken fuctions###########################################################################
+//reads animation data from coolLED v2.1.6
+function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
+    const pixelArrayFrames = [];
+    //const pixelsPerFrame = pixelWidth * pixelHeight;
+    //const totalPixels = pixelsPerFrame * totalFrames;
+    const pixelsPerColor = pixelWidth * pixelHeight/8   //is 64 for 16x32 file, 64*3=192 elements for 3 colors
+    var i,j;var curRow;var frameIndex;var curRowx=0;
+    var redArr=[];var greenArr=[];var blueArr=[];
+    var redArrFm=[];var greenArrFm=[];var blueArrFm=[];
+    var redbit=[];var greenbit=[];var bluebit=[];
+    var redrow=[];var greenrow=[];var bluerow=[];
+    var temparr=[];var tempred=[];var tempgrn=[];var tempblu=[];
+
+    //read jtDdata into color arrays
+    var greenoffset = pixelsPerColor*totalFrames    //64*2   = 128 
+    var blueoffset  = pixelsPerColor*totalFrames*2  //64*2*2 = 256
+    for (i=0;i<greenoffset;i++){         
+      redArr.push(jtData[i]);
+    }
+    for (i=greenoffset;i<blueoffset;i++){         
+      greenArr.push(jtData[i])
+    }
+    for (i=blueoffset;i<jtData.length;i++){         
+      blueArr.push(jtData[i])
+    }
+
+    //push color data to color frame arrays
+    for (frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+      tempred=[];tempgrn=[];tempblu=[];
+      for (i=frameIndex*pixelsPerColor;i<frameIndex*pixelsPerColor+pixelsPerColor;i++) {
+        tempred.push(redArr[i])
+        tempgrn.push(greenArr[i])
+        tempblu.push(blueArr[i])
+      }
+    redArrFm.push(tempred);
+    greenArrFm.push(tempgrn);
+    blueArrFm.push(tempblu);
+    }//frame
+
+  //populate color row arrays with pixelframe data
+  for (frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+    redbit=[];greenbit=[];bluebit=[];pixelArray = []
+  //pixelframe data is in bit positions 7 to 0 for each group of eight in pixel columns
+  for (j=0;j<pixelsPerColor;j=j+2){ //get values from color arrays
+    for (curRow=0;curRow<8;curRow++){  //16 rows per col, 8 rows per array element
+      //each color in array is 8 rows     
+        redrow[curRow] = bitshft(redArrFm[frameIndex][j],7-curRow % 8)
+        greenrow[curRow] = bitshft(greenArrFm[frameIndex][j],7-curRow % 8)
+        bluerow[curRow] = bitshft(blueArrFm[frameIndex][j],7-curRow % 8)
+    }//curRow
+    //get next color array element
+    for (curRow=8;curRow<16;curRow++){  //16 rows per col, 8 rows per array element
+      //each color in array is 8 rows
+        redrow[curRow] = bitshft(redArrFm[frameIndex][j+1],7-curRow % 8)
+        greenrow[curRow] = bitshft(greenArrFm[frameIndex][j+1],7-curRow % 8)
+        bluerow[curRow] = bitshft(blueArrFm[frameIndex][j+1],7-curRow % 8)
+    }//curRow
+        redbit.push(redrow);
+        greenbit.push(greenrow);
+        bluebit.push(bluerow);
+        redrow=[];greenrow=[];bluerow=[]
+  }//color arr
+
+  //generate pixelframe array from color arrays
+    for (curRow=0;curRow<16;curRow++){
+      temparr=[]  
+      for (j=0;j<redbit.length;j++){
+        temparr.push( putBinaryComponent( bluebit[j][curRow].toString()+greenbit[j][curRow].toString()+redbit[j][curRow].toString() ) )
+      } 
+      pixelArray.push(temparr)
+    }//curRow
+    pixelArrayFrames.push(pixelArray)
+  }//frame
+
+return pixelArrayFrames
+}//function
+
+//bit shift function
+function bitshft(myint,n){return (myint >> n) & 0x1;}
+
+function putBinaryComponent(color) {
+            color = color.toUpperCase();
+            const colorMap = {
+                '000':'#000000', // Black
+                '001':'#FF0000', // Red
+                '010':'#00FF00', // Green
+                '011':'#FFFF00', // Yellow
+                '100':'#0000FF', // Blue
+                '101':'#FF00FF', // Magenta
+                '110':'#00FFFF', // Cyan
+                '111':'#FFFFFF' // White
+            };
+            return colorMap[color];
+}            
+
+function myupdate(){
+  document.getElementById('upButton').click();document.getElementById('downButton').click();
+}
+
+function init(){
+document.getElementById("sizeDropdown").value="16x32";
+document.getElementById("customColorPicker").value="#000000"
+document.getElementById("paletteIcon").style.color="#000000"
+var myevent = new Event('change');
+document.getElementById("customColorPicker").dispatchEvent(myevent)
+document.getElementById("paintBucketButton").click();
+document.getElementById("debugToggle").click();
+}
