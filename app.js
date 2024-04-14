@@ -671,6 +671,8 @@ init();
 //ken fuctions###########################################################################
 //reads animation data from coolLED v2.1.6
 function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
+//currently only supports 16 rows
+if (pixelHeight>16){alert("Rows>16 not currently supported");return;}
     const pixelArrayFrames = [];
     //const pixelsPerFrame = pixelWidth * pixelHeight;
     //const totalPixels = pixelsPerFrame * totalFrames;
