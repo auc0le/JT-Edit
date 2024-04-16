@@ -4,6 +4,7 @@ let greenBinaryArray    = [[]];
 let blueBinaryArray     = [[]];
 let selectedFormat      = "v1"; 
 let selectedSize        = "16x96";
+var mousedown_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 
 // global vars for animation logic
 let currentMode = "static";
@@ -21,7 +22,6 @@ let graffitiType    = 1;
 let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
-var mousedown_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
