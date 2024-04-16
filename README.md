@@ -6,8 +6,4 @@ It should support manual manipulation of individual pixes in the 3 bit (aka 7 + 
 
 In the samples folder, You can use the sample jpg and sample color table to edit in photoshop then import into the tool to convert to JT format.
 
-Todo:
-1. Add support for importing / reading JT files.
-2. Improve the color mapping for opening files down to 3 bit color.
-
 Please contribute any changes you make on your system by sending a pull request!
