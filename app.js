@@ -720,9 +720,7 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
   for (j=0;j<pixelsPerColor;j++){ //get values from color arrays
     for (curRow=0;curRow<pixelHeight;curRow++){  //16 rows per col, 8 rows per array element
       //each color in array is 8 rows
-      if (curRow == 8){j++;}
-      if (curRow == 16){j++;}
-      if (curRow == 24){j++;}
+        if ( curRow%8 == 0 && curRow!=0 ){j++;}
         redrow[curRow] = bitshft(redArrFm[frameIndex][j],7-curRow % 8)
         greenrow[curRow] = bitshft(greenArrFm[frameIndex][j],7-curRow % 8)
         bluerow[curRow] = bitshft(blueArrFm[frameIndex][j],7-curRow % 8)
