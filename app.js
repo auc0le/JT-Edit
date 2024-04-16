@@ -23,6 +23,7 @@ let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
 
+
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
     const textDisplay = document.getElementById('textDisplay');
@@ -196,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Function to draw pixel colors while dragging mouse
-        function togglePixel(row, col) {
+        function togglePixelOnce(row, col) {
             if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
               pixelArray[row][col] = selectedColor;
             } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
@@ -204,6 +205,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             drawPixels();
             updateTextDisplay();
+        }
+
+        // Function to draw pixel colors while dragging mouse
+        function togglePixel(row, col) {
+            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
+              pixelArray[row][col] = selectedColor;
+              drawPixels();
+              updateTextDisplay();
+            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
+              pixelArray[row][col] = "#000000";
+              drawPixels();
+              updateTextDisplay();
+            }
         }
 
         // Function to toggle the debug text display
@@ -504,7 +518,7 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
 
                 // Add click event listeners for pixel editing
                 pixel.addEventListener('mouseover', () => {togglePixel(rowIndex, columnIndex)});
-                pixel.addEventListener('mousedown', () => {togglePixel(rowIndex, columnIndex)});
+                pixel.addEventListener('mousedown', () => {togglePixelOnce(rowIndex, columnIndex)});
                 //prevent context menu when using right mouse button
                 pixel.addEventListener("contextmenu", event => {event.preventDefault();return false;});
 
