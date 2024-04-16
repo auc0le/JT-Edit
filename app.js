@@ -671,8 +671,11 @@ init();
 //ken fuctions###########################################################################
 //reads animation data from coolLED v2.1.6
 function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
-//currently only supports 16 rows
-if (pixelHeight>16){alert("Rows>16 not currently supported");return;}
+    //set the size
+    document.getElementById("sizeDropdown").value=pixelHeight.toString()+"x"+pixelWidth.toString();
+    //set to frame 0
+    currentFrameIndex=0;
+    document.getElementById("backButton").click()
     const pixelArrayFrames = [];
     //const pixelsPerFrame = pixelWidth * pixelHeight;
     //const totalPixels = pixelsPerFrame * totalFrames;
@@ -714,20 +717,17 @@ if (pixelHeight>16){alert("Rows>16 not currently supported");return;}
   for (frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     redbit=[];greenbit=[];bluebit=[];pixelArray = []
   //pixelframe data is in bit positions 7 to 0 for each group of eight in pixel columns
-  for (j=0;j<pixelsPerColor;j=j+2){ //get values from color arrays
-    for (curRow=0;curRow<8;curRow++){  //16 rows per col, 8 rows per array element
-      //each color in array is 8 rows     
+  for (j=0;j<pixelsPerColor;j++){ //get values from color arrays
+    for (curRow=0;curRow<pixelHeight;curRow++){  //16 rows per col, 8 rows per array element
+      //each color in array is 8 rows
+      if (curRow == 8){j++;}
+      if (curRow == 16){j++;}
+      if (curRow == 24){j++;}
         redrow[curRow] = bitshft(redArrFm[frameIndex][j],7-curRow % 8)
         greenrow[curRow] = bitshft(greenArrFm[frameIndex][j],7-curRow % 8)
         bluerow[curRow] = bitshft(blueArrFm[frameIndex][j],7-curRow % 8)
     }//curRow
-    //get next color array element
-    for (curRow=8;curRow<16;curRow++){  //16 rows per col, 8 rows per array element
-      //each color in array is 8 rows
-        redrow[curRow] = bitshft(redArrFm[frameIndex][j+1],7-curRow % 8)
-        greenrow[curRow] = bitshft(greenArrFm[frameIndex][j+1],7-curRow % 8)
-        bluerow[curRow] = bitshft(blueArrFm[frameIndex][j+1],7-curRow % 8)
-    }//curRow
+    //push arrays
         redbit.push(redrow);
         greenbit.push(greenrow);
         bluebit.push(bluerow);
@@ -735,7 +735,7 @@ if (pixelHeight>16){alert("Rows>16 not currently supported");return;}
   }//color arr
 
   //generate pixelframe array from color arrays
-    for (curRow=0;curRow<16;curRow++){
+    for (curRow=0;curRow<pixelHeight;curRow++){
       temparr=[]  
       for (j=0;j<redbit.length;j++){
         temparr.push( putBinaryComponent( bluebit[j][curRow].toString()+greenbit[j][curRow].toString()+redbit[j][curRow].toString() ) )
