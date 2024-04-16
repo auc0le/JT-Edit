@@ -21,7 +21,7 @@ let graffitiType    = 1;
 let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
-
+var mousedown_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
@@ -195,9 +195,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTextDisplay();
         }
 
-        // Function to toggle pixel color
+        // Function to draw pixel colors while dragging mouse
         function togglePixel(row, col) {
-            pixelArray[row][col] = selectedColor;
+            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
+              pixelArray[row][col] = selectedColor;
+            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
+              pixelArray[row][col] = "#000000";
+            }
             drawPixels();
             updateTextDisplay();
         }
@@ -231,6 +235,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
     document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+    
+    //Event listeners for mouse buttons -- allows pixels to be drawn while holding mouse buttons
+    document.addEventListener("mouseup", function(){ mousedown_Gbl=-1; });
+    document.addEventListener("mousedown", event => { mousedown_Gbl=event.button; });
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
@@ -494,8 +502,11 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
                 pixel.style.width           = `${pixelSize}px`;
                 pixel.style.height          = `${pixelSize}px`;
 
-                // Add click event listener for pixel editing
-                pixel.addEventListener('click', () => togglePixel(rowIndex, columnIndex));
+                // Add click event listeners for pixel editing
+                pixel.addEventListener('mouseover', () => {togglePixel(rowIndex, columnIndex)});
+                pixel.addEventListener('mousedown', () => {togglePixel(rowIndex, columnIndex)});
+                //prevent context menu when using right mouse button
+                pixel.addEventListener("contextmenu", event => {event.preventDefault();return false;});
 
                 pixelCanvas.appendChild(pixel);
             });
