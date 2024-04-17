@@ -4,6 +4,7 @@ let greenBinaryArray    = [[]];
 let blueBinaryArray     = [[]];
 let selectedFormat      = "v1"; 
 let selectedSize        = "16x96";
+var mousedown_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 
 // global vars for animation logic
 let currentMode = "static";
@@ -195,11 +196,28 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTextDisplay();
         }
 
-        // Function to toggle pixel color
-        function togglePixel(row, col) {
-            pixelArray[row][col] = selectedColor;
+        // Function to draw pixel colors while dragging mouse
+        function togglePixelOnce(row, col) {
+            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
+              pixelArray[row][col] = selectedColor;
+            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
+              pixelArray[row][col] = "#000000";
+            }
             drawPixels();
             updateTextDisplay();
+        }
+
+        // Function to draw pixel colors while dragging mouse
+        function togglePixel(row, col) {
+            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
+              pixelArray[row][col] = selectedColor;
+              drawPixels();
+              updateTextDisplay();
+            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
+              pixelArray[row][col] = "#000000";
+              drawPixels();
+              updateTextDisplay();
+            }
         }
 
         // Function to toggle the debug text display
@@ -231,6 +249,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
     document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+    
+    //Event listeners for mouse buttons -- allows pixels to be drawn while holding mouse buttons
+    document.addEventListener("mouseup", function(){ mousedown_Gbl=-1; });
+    document.addEventListener("mousedown", event => { mousedown_Gbl=event.button; });
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
@@ -494,8 +516,11 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
                 pixel.style.width           = `${pixelSize}px`;
                 pixel.style.height          = `${pixelSize}px`;
 
-                // Add click event listener for pixel editing
-                pixel.addEventListener('click', () => togglePixel(rowIndex, columnIndex));
+                // Add click event listeners for pixel editing
+                pixel.addEventListener('mouseover', () => {togglePixel(rowIndex, columnIndex)});
+                pixel.addEventListener('mousedown', () => {togglePixelOnce(rowIndex, columnIndex)});
+                //prevent context menu when using right mouse button
+                pixel.addEventListener("contextmenu", event => {event.preventDefault();return false;});
 
                 pixelCanvas.appendChild(pixel);
             });
@@ -720,9 +745,7 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
   for (j=0;j<pixelsPerColor;j++){ //get values from color arrays
     for (curRow=0;curRow<pixelHeight;curRow++){  //16 rows per col, 8 rows per array element
       //each color in array is 8 rows
-      if (curRow == 8){j++;}
-      if (curRow == 16){j++;}
-      if (curRow == 24){j++;}
+        if ( curRow%8 == 0 && curRow!=0 ){j++;}
         redrow[curRow] = bitshft(redArrFm[frameIndex][j],7-curRow % 8)
         greenrow[curRow] = bitshft(greenArrFm[frameIndex][j],7-curRow % 8)
         bluerow[curRow] = bitshft(blueArrFm[frameIndex][j],7-curRow % 8)
