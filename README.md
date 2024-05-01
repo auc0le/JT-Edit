@@ -10,7 +10,7 @@ Please contribute any changes you make on your system by sending a pull request!
 
 ...
 
-Panel Communication
+<b>Panel Communication</b>
 
 CoolLED1248
 Versions 2.x of the Android app can import and export JT files.  If you have problems importing or with other functions, try version 2.1.4.
@@ -40,28 +40,30 @@ To install the CoolLEDX driver on your system:
 
         python3 -m pip install StrEnum
 
+    <pre>
     #---then edit the first few lines of coolledx/__init__.py file----
     #from enum import IntEnum, StrEnum
     from enum import IntEnum
     from strenum import StrEnum 
     #-----------------------------------------------------------------
+    </pre>
 
-To send commands to the panel:
-
+<b>To send commands to the panel:</b>
 1.  Change to the coolledx-driver directory and use scan.py to find your MAC address.
 
         python3 utils/scan.py
-
+    <pre>
     --response---
     Scanning for 10.0 seconds (change duration with -t) . . .
     --------------------------------------------------------------------------------
     Device: CoolLEDX (XX:XX:XX:XX:XX:XX), RSSI: -61
     Height: 16, Width: 32
+    </pre>
 
 2.  Use utils/tweak_sign.py to send commands to the panel.
 
         python3 utils/tweak_sign.py x
-
+    <pre>
     --response---
     usage: tweak_sign.py 
     [-h] [-a [ADDRESS]] [-t TEXT] [-s SPEED] [-b BRIGHTNESS] [-c COLOR] [-C BACKGROUND_COLOR]
@@ -69,8 +71,9 @@ To send commands to the panel:
     [-o ONOFF] [-m MODE] [-i IMAGE] [-n ANIMATION] [-N ANIMATION_SPEED] [-w WIDTH_TREATMENT]
     [-g HEIGHT_TREATMENT] [-z HORIZONTAL_ALIGNMENT] [-y VERTICAL_ALIGNMENT]
     tweak_sign.py: error: unrecognized arguments: x
+    </pre>
 
-3.  To send an image to the panel:
+<b>To send an image to the panel:</b>
 
         python3 utils/tweak_sign.py -a YOUR:MAC:FROM:SCAN:PY -i yourimage.png
     
