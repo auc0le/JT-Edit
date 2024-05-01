@@ -6,10 +6,18 @@ body {
     margin: 0;
 }
 
+button {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  font-size: 25px;
+  font-weight: bold;
+}
+
 .icon-group {
     display: flex;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 #imageInput {
@@ -20,7 +28,7 @@ body {
     padding: 20px;
 }
 
-#paletteIcon {
+#paletteIcon, #rtclickIcon {
     font-size: 24px;
     cursor: pointer;
 }
@@ -31,7 +39,7 @@ body {
     grid-template-columns: repeat(96, 1fr);
     gap: 1px;
     padding: 0 15px; /* Added padding */
-    margin-bottom: 15px; /* Added margin-bottom */
+    margin-bottom: 10px; /* Added margin-bottom */
 }
 
 #textDisplay {
@@ -47,11 +55,19 @@ body {
     box-sizing: border-box;
 }
 
-
 .fa-palette,
 .fa-folder {
     font-size: 24px;
     cursor: pointer;
+}
+
+.icons {
+    font-size: 14px;
+    width: 25px; 
+    height: 25px; 
+    cursor: pointer;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .icon-group i {
@@ -75,7 +91,7 @@ body {
 }
 
 #directionButtons, #controlButtons {
-    display: flex;
+    display: flex; 
     justify-content: center;
     gap: 10px;
     margin-top: 10px;
@@ -94,5 +110,55 @@ body {
 }
 
 #frameDisplay {
-    padding-left: 10px;
+  padding-left: 10px;
+  font-family: verdana;
+  font-weight: bold;
+  font-size: 20px;
+} 
+#delay_id {
+  width: 8ch;
+  height: 3ch;
+  font-size: 14px;
+} 
+#delaytxt {
+  padding-left: 10px;
+  font-family: verdana;
+  font-weight: bold;
+  font-size: 20px;
+}
+.bigbutton {
+font-size: 20px;
+font-weight: bold;
+text-align: center;
+margin: auto;
+min-width: 3ch;
+}
+.swapdiag {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  /*padding-top: 100px; /* Location of the box -- needed if not auto centering in .swapdiag-content */
+
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.swapdiag-content {
+  border-radius: 20px;
+  position: fixed; /* or absolute */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-image: linear-gradient(90deg,  #847e01, #bcbcbc, #847e01 );
+  border: 10px solid #003d01;
+  /*width: 380px;*/ 
+  /* old way auto center requires height defined  
+  height: 186px; position: absolute; top: 0; left: 0; bottom: 0; right: 0; margin: auto;
+  */
 }

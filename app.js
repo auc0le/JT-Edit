@@ -1,13 +1,28 @@
+// global vars, set for preferred GUI start settings
+var selectedFormat      = "v1";                //file format
+var selectedSize        = "16x32";             //initial canvas size
+var startColor          = "#FFFFFF";           //left mouse btn initial pixel paint color in hex format
+var rtmouseBtnColor     = "#000000";           //right mouse btn initial pixel paint color in hex format
+var initialPixelSize    = "20";                //initial pixel size
+var currentMode         = "static";            //initial mode of static or animation
+var bgColor             = "#b2b2b2";           //body background color in hex format
+var jtFileName          = "image.jt";          //default save filename for jt files
+var imageFileName       = "coolLED_img.png";   //default save filename for image files
+var animationFileName   = "coolLED_ani.png";   //base save filename for animation files
+var debug_GBL=false;                           //set to false to disable the debug_init() function
+
+//globals for swap frames dialog
+var diag_idx1=1;                               
+var diag_idx2=2;                               
+
 // global vars for GUI
+var selectedColor
 let redBinaryArray      = [[]];
 let greenBinaryArray    = [[]];
 let blueBinaryArray     = [[]];
-let selectedFormat      = "v1"; 
-let selectedSize        = "16x96";
-var mousedown_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
+var mousebtn_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 
 // global vars for animation logic
-let currentMode = "static";
 let pixelArrayFrames = [[]];
 let currentFrameIndex = 0;
 let totalFrames = 1;
@@ -30,9 +45,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const customColorPicker = document.getElementById('customColorPicker');
     const paletteIcon = document.getElementById('paletteIcon');
     const imageInput = document.getElementById('imageInput');
+    
+    //set customColorPicker dropdown option to the startColor global var
+    customColorPicker.value=startColor;
+    selectedColor = customColorPicker.value; // Set selectedColor from dropdown   
+    
+    //set dropdowns to match global vars
+    document.getElementById("pixelSizeInput").value=initialPixelSize;
+    document.getElementById("sizeDropdown").value=selectedSize;
+    document.getElementById("formatDropdown").value=selectedFormat;
+    document.getElementById("modeDropdown").value=currentMode;
 
-    let selectedColor = customColorPicker.value; // Set default color to the first option    
-    let isPlaying = false; // Variable to track animation state    
+
+    let isPlaying = false; // Variable to track animation state
+
+    //set the background color
+    document.body.style.backgroundColor=bgColor;
 
     // --- Event Listeners for GUI ---
 
@@ -58,6 +86,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Handle plus button click
                     if (currentMode === "animation") {
                         addFrame();
+                    }
+                    break;
+                case "minusButton":
+                    // Handle minus button click
+                    if (currentMode === "animation") {
+                        deleteFrame();
+                    }
+                    break;
+                case "swapButton":
+                    // Handle minus button click
+                    if (currentMode === "animation") {
+                        swap_diag();
                     }
                     break;
                 default:
@@ -110,27 +150,34 @@ document.addEventListener('DOMContentLoaded', function() {
         function handleFormatChange() {
             const formatDropdown = document.getElementById("formatDropdown");
             selectedFormat = formatDropdown.value;
-
         }
 
         // Function to handle paint bucket button click
         function handlePaintBucket() {
-
             // Set all pixels in the current array to the selected color
-            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelWidth, pixelHeight);
+            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelHeight, pixelWidth, selectedColor);
             drawPixels();
             updateTextDisplay();
+        }
 
+        // Function to handle RMB paint bucket button click
+        function RMBhandlePaintBucket() {
+            // Set all pixels in the current array to the selected color
+            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelHeight, pixelWidth, rtmouseBtnColor);
+            drawPixels();
+            updateTextDisplay();
         }
 
         // Function to handle animation vs static mode change
         function handleModeChange() {
+            //stop animation
+            isPlaying=false;
             const modeDropdown = document.getElementById("modeDropdown");
             currentMode = modeDropdown.value;
 
             // Toggle the visibility of the control buttons based on the mode
             const controlButtons = document.getElementById("controlButtons");
-            controlButtons.style.display = currentMode === "animation" ? "flex" : "none";
+            controlButtons.style.display = currentMode === "animation" ? "block" : "none";
             dataType = currentMode === "animation" ? 0 : 1; // 0 = animation, 1 = static
         }
 
@@ -175,11 +222,25 @@ document.addEventListener('DOMContentLoaded', function() {
             openColorPicker();
         });
 
+        // Event listener for right click icon click
+        document.getElementById("rtclickIcon").style.color = rtmouseBtnColor
+        document.getElementById("rtclickIcon").addEventListener("mousedown", changermbColor);
+        // Event listener for document, disable context menu and assign mousebtn_Gbl event.button
+        document.addEventListener("contextmenu", event => {mousebtn_Gbl=event.button;event.preventDefault();return false;});
+
         // Function to handle size change
         function handleSizeChange() {
+            //stop animation  
+            isPlaying=false;
+            //erase current image
+            pixelArrayFrames = [[]];
+            currentFrameIndex = 0;
+            totalFrames = 1;
+            ///////////////////////
+            document.getElementById("totalFrames").innerText="1";document.getElementById("currentFrame").innerText="1"
             const sizeDropdown      = document.getElementById("sizeDropdown");
             const selectedSize      = sizeDropdown.value;
-            const [width, height]   = selectedSize.split("x").map(Number);
+            const [height, width]   = selectedSize.split("x").map(Number);      //height & width were getting swapped here
 
             pixelHeight             = height;
             pixelWidth              = width;
@@ -191,33 +252,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Update your pixel array and canvas size here
-            pixelArrayFrames[currentFrameIndex] = createPixelArray(width, height);
+            pixelArrayFrames[currentFrameIndex] = createPixelArray(height, width, rtmouseBtnColor);//use rtmouseBtnColor bg 
             drawPixels();
             updateTextDisplay();
-        }
-
-        // Function to draw pixel colors while dragging mouse
-        function togglePixelOnce(row, col) {
-            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
-              pixelArray[row][col] = selectedColor;
-            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
-              pixelArray[row][col] = "#000000";
-            }
-            drawPixels();
-            updateTextDisplay();
-        }
-
-        // Function to draw pixel colors while dragging mouse
-        function togglePixel(row, col) {
-            if (mousedown_Gbl==0){                      //will draw selectedColor when holding left mouse button
-              pixelArray[row][col] = selectedColor;
-              drawPixels();
-              updateTextDisplay();
-            } else if (mousedown_Gbl==2) {              //will draw black when holding right mouse button
-              pixelArray[row][col] = "#000000";
-              drawPixels();
-              updateTextDisplay();
-            }
         }
 
         // Function to toggle the debug text display
@@ -228,20 +265,51 @@ document.addEventListener('DOMContentLoaded', function() {
             // Toggle the color of the bug/debug icon
             const debugToggleIcon = document.getElementById("debugToggle");
             const isDebugVisible = textDisplay.style.display === "block";
-            debugToggleIcon.style.color = isDebugVisible ? "green" : "black";
+            debugToggleIcon.childNodes[0].src = isDebugVisible ? "icons/bugG.png" : "icons/bug.png"
         }
 
 
         // Function to update palette icon color
         function updatePaletteIconColor() {
-            paletteIcon.style.color = selectedColor;
+          var el = document.getElementById("paletteIcon")
+          var dd = document.getElementById("customColorPicker")
+          var clrtxt = dd.options[dd.selectedIndex].innerText
+          el.childNodes[0].src="icons/palette"+clrtxt+".png"
+        }
+        
+        // Advances to next color on paletteIcon click
+        function openColorPicker() {        
+          var el = document.getElementById("customColorPicker")
+          var myevent = new Event('change');
+
+          if (el.selectedIndex + 1 < el.length){  //cycle through colors in dropdown
+            el.selectedIndex++;
+          }else{
+            el.selectedIndex = 0;
+          }
+        el.dispatchEvent(myevent)
         }
 
-        // Function to open color picker
-        window.openColorPicker = function() {
-            customColorPicker.click();
-        };
-
+        // Advances to next color on rtclickIcon click
+        function changermbColor() {   
+          var dd = document.getElementById("customColorPicker")   
+          var el = document.getElementById("rtclickIcon").childNodes[0]
+          var curcolor = el.src.split("/")[el.src.split("/").length-1].replace("rt","").replace(".png","")
+          var nextcolor
+          //find next color
+            for (var i=0;i<dd.options.length;i++){
+              if (dd.options[i].innerText == curcolor){
+                if (i<dd.options.length-1){
+                nextcolor = dd.options[i+1].innerText
+                } else {  
+                nextcolor = dd.options[0].innerText
+                }
+                break;
+              }
+            }//for
+          el.src="icons/rt"+nextcolor+".png"   
+          rtmouseBtnColor = colorNameToHex(nextcolor);        
+      }//func
 
     // --- End Event Listeners for GUI ---
 
@@ -249,10 +317,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
     document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
+    document.getElementById("RMBpaintBucketButton").addEventListener("click", RMBhandlePaintBucket);
     
     //Event listeners for mouse buttons -- allows pixels to be drawn while holding mouse buttons
-    document.addEventListener("mouseup", function(){ mousedown_Gbl=-1; });
-    document.addEventListener("mousedown", event => { mousedown_Gbl=event.button; });
+    document.addEventListener("mouseup", function(){  mousebtn_Gbl=-1; });
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
@@ -272,30 +340,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("playPauseButton").addEventListener("click", () => handleButtonClick("playPauseButton"));
     document.getElementById("forwardButton").addEventListener("click", () => handleButtonClick("forwardButton"));
     document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
+    document.getElementById("minusButton").addEventListener("click", () => handleButtonClick("minusButton"));
+    document.getElementById("swapButton").addEventListener("click", () => handleButtonClick("swapButton"));
 
     // --- End Binding of event listeners ---
 
     // --- Image Utility functions ---
-      // Function to get the binary component for a specific color
-        function getBinaryComponent(color, position) {
-            color = color.toUpperCase();
 
-            const colorMap = {
-                '#000000': '000', // Black
-                '#FF0000': '001', // Red
-                '#00FF00': '010', // Green
-                '#FFFF00': '011', // Yellow
-                '#0000FF': '100', // Blue
-                '#FF00FF': '101', // Magenta
-                '#00FFFF': '110', // Cyan
-                '#FFFFFF': '111' // White
-            };
-
-            currentColor = colorMap[color];
-            const binaryValue = currentColor.substring(position, position + 1) ?? '0'
-
-            return binaryValue
-        }
+    // Function to get the binary component for a specific color
+    // function getBinaryComponent(color, position) moved outside event listener
 
         // Function to convert hex to RGB
         function hexToRgb(hex) {
@@ -347,14 +400,14 @@ document.addEventListener('DOMContentLoaded', function() {
      
     // --- End Image Utility functions ---
 
-    // Function to create pixel array with default color
-    function createPixelArray(width, height) {
-        const NewPixelArray = Array.from({
-                length: height
+    // Function to create pixel array with selected color
+    function createPixelArray(height, width, color) {                 //changed to height, width for consistency with size dropdown format
+        const NewPixelArray = Array.from({                            //added color parameter so frames can be created with any bg color
+                length: height                                        
             }, () =>
             Array.from({
                 length: width
-            }, () => selectedColor) // Initialize with default color
+            }, () => color) // paint bg with requested color
         );
         return NewPixelArray;
     }
@@ -372,40 +425,30 @@ function loadPixelArrayFromJTFile(data) {
             console.log("animation JT file");
             currentMode = 'animation';
             totalFrames = jsonData.data.frameNum;
-            console.log("totalFrames " + totalFrames);
+            console.log("totalFrames " + totalFrames); 
+            console.log("delays " + jsonData.data.delays);
 
             // Populate pixelArrayFrames with each frame
-            //ken change############################################################
             pixelHeight     = jsonData.data.pixelHeight;
             pixelWidth      = jsonData.data.pixelWidth;
+            delays          = jsonData.data.delays;
+            document.getElementById("delay_id").value=delays.toString();
             pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
-            //convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
-
-            //console.log(pixelArrayFrames);
-            //pixelArrayFrames = jsonData.data.aniData.map(frameData => {
-            //    return frameData.pixelArray.map(row => row.map(value => Number(value)));
-            //});
-            //ken change############################################################
 
         } else if (dataType === 1 && jsonData.data.graffitiData) {
             console.log("static JT file");
             currentMode = 'static';
             totalFrames = 1;
-
             pixelHeight     = jsonData.data.pixelHeight;
-            //ken change############################################################
-            //pixelWidth      = jsonData.datapixelWidth; //dot missing on original code
             pixelWidth      = jsonData.data.pixelWidth;
-            //ken change############################################################
-
-            pixelArrayFrames = convertJTDataToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);
-            console.log(pixelArrayFrames);
+            pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);    
+            //function convertJTDataToPixelArrayFrames() does not work 
 
         } else {
             console.error('Unsupported data type');
         }
-
-        updateGUIMode();
+        //update mode dropdown
+        document.getElementById("modeDropdown").value=currentMode;handleModeChange();
         drawPixels();
         updateTextDisplay();
 
@@ -414,59 +457,24 @@ function loadPixelArrayFromJTFile(data) {
     }
 }
 
-// Function to update GUI based on the current mode
-function updateGUIMode() {
-    // Adjust the GUI elements based on the current mode
-    // For example, show/hide play buttons, update dropdown options, etc.
-}
-
-function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
-    const pixelArrayFrames = [];
-    const pixelsPerFrame = pixelWidth * pixelHeight;
-    const totalPixels = pixelsPerFrame * totalFrames;
-
-    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        const frameStartIndex = frameIndex * pixelsPerFrame * 3;
-        const pixelArray = [];
-
-        for (let i = 0; i < pixelHeight; i++) {
-            const row = [];
-            for (let j = 0; j < pixelWidth; j++) {
-                const pixelIndex = i * pixelWidth + j;
-                const redIndex = frameStartIndex + pixelIndex;
-                const greenIndex = frameStartIndex + pixelIndex + totalPixels; // Offset for green values
-                const blueIndex = frameStartIndex + pixelIndex + totalPixels * 2; // Offset for blue values
-
-                const red = jtData[redIndex];
-                const green = jtData[greenIndex];
-                const blue = jtData[blueIndex];
-                
-                const hexColor = rgbToHex(red, green, blue);
-                row.push(hexColor);
-            }
-            pixelArray.push(row);
-        }
-        pixelArrayFrames.push(pixelArray);
-    }
-    return pixelArrayFrames;
-}
-
-
-
     // Function to load pixel array from image
     function loadPixelArrayFromImage(img) {
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         tempCanvas.width = img.width;
         tempCanvas.height = img.height;
-
         tempCtx.drawImage(img, 0, 0, img.width, img.height);
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+        img_gbl = tempCtx.getImageData(0, 0, img.width, img.height)
+        //update size format
+        document.getElementById("sizeDropdown").value=img.height.toString()+"x"+img.width.toString();handleSizeChange();
+        //update mode format
+        document.getElementById("modeDropdown").value='static';handleModeChange();
 
         pixelArrayFrames = [[]];
         currentFrameIndex = 0;
         totalFrames = 1;
-        pixelArrayFrames[currentFrameIndex] = createPixelArray(img.width, img.height);
+        pixelArrayFrames[currentFrameIndex] = createPixelArray(img.height, img.width, rtmouseBtnColor);
 
         let dataIndex = 0;
         for (let y = 0; y < img.height; y++) {
@@ -487,106 +495,14 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
         updateTextDisplay();
     }
 
-    // Function to draw pixels on the canvas
-    function drawPixels() {
-        const pixelCanvas       = document.getElementById("pixelCanvas");
-        pixelCanvas.innerHTML   = ""; // Clear previous pixels
-
-        const sizeDropdown      = document.getElementById("sizeDropdown");
-        selectedSize            = sizeDropdown.value;
-        const [height, width]   = selectedSize.split("x").map(Number);
-        pixelHeight             = height;
-        pixelWidth              = width;
-        
-        const pixelSizeInput    = document.getElementById("pixelSizeInput");
-        const pixelSize         = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
-
-        // Calculate the width of each pixel based on the container size and array width
-        const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;
-
-        pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
-
-        pixelArray = pixelArrayFrames[currentFrameIndex];
-
-        pixelArray.forEach((row, rowIndex) => {
-            row.forEach((color, columnIndex) => {
-                const pixel                 = document.createElement("div");
-                pixel.className             = "pixel";
-                pixel.style.backgroundColor = color;                
-                pixel.style.width           = `${pixelSize}px`;
-                pixel.style.height          = `${pixelSize}px`;
-
-                // Add click event listeners for pixel editing
-                pixel.addEventListener('mouseover', () => {togglePixel(rowIndex, columnIndex)});
-                pixel.addEventListener('mousedown', () => {togglePixelOnce(rowIndex, columnIndex)});
-                //prevent context menu when using right mouse button
-                pixel.addEventListener("contextmenu", event => {event.preventDefault();return false;});
-
-                pixelCanvas.appendChild(pixel);
-            });
-
-        });
-
-        updateTextDisplay();
-    }
-
     // Function to update text display below canvas with binary representation of 3-bit color space
-    function updateTextDisplay() {
-
-            pixelArray = pixelArrayFrames[currentFrameIndex];
-
-            redBinaryArray[currentFrameIndex] =[];
-            greenBinaryArray[currentFrameIndex] = [];
-            blueBinaryArray[currentFrameIndex] = [];
-
-            const rowLength = pixelArray[0].length;
-
-            for (let j = 0; j < rowLength; j++) {
-                let redBinary = '';
-                let greenBinary = '';
-                let blueBinary = '';
-
-                for (let i = 0; i < pixelArray.length; i++) {
-                    const color = pixelArray[i][j];
-                    const redValue = getBinaryComponent(color, 2);
-                    const greenValue = getBinaryComponent(color, 1);
-                    const blueValue = getBinaryComponent(color, 0);
-
-                    redBinary += redValue;
-                    greenBinary += greenValue;
-                    blueBinary += blueValue;
-
-                    // Group every 8 bits and convert to decimal
-                    if (redBinary.length === 8) {
-                        redBinaryArray[currentFrameIndex].push(parseInt(redBinary, 2));
-                        redBinary = '';
-                    }
-
-                    if (greenBinary.length === 8) {
-                        greenBinaryArray[currentFrameIndex].push(parseInt(greenBinary, 2));
-                        greenBinary = '';
-                    }
-
-                    if (blueBinary.length === 8) {
-                        blueBinaryArray[currentFrameIndex].push(parseInt(blueBinary, 2));
-                        blueBinary = '';
-                    }
-                }
-            } // rowLength
-
-        const redDecimalText    = `Red: [${redBinaryArray[currentFrameIndex].join(', ')}]`;
-        const greenDecimalText  = `Green: [${greenBinaryArray[currentFrameIndex].join(', ')}]`;
-        const blueDecimalText   = `Blue: [${blueBinaryArray[currentFrameIndex].join(', ')}]`;
-
-        textDisplay.textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
-    }
+    // function updateTextDisplay() moved outside event listener
 
     // --- Animation functions ---
         // Function to add a frame
         function addFrame() {
 
-            const NewPixelArray = createPixelArray(pixelWidth, pixelHeight);
-
+            const NewPixelArray = createPixelArray(pixelHeight, pixelWidth, rtmouseBtnColor);  //fill with rtmouseBtnColor
             pixelArrayFrames.push(NewPixelArray);   
             totalFrames = pixelArrayFrames.length;
             currentFrameIndex = totalFrames - 1; // Set current frame to the newly added frame
@@ -658,43 +574,81 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
             }
         }
 
-        // Function to update frame display / frame count
-        function updateFrameDisplay() {
-            const currentFrameSpan = document.getElementById("currentFrame");
-            const totalFramesSpan = document.getElementById("totalFrames");
-            currentFrameSpan.textContent = currentFrameIndex + 1;
-            totalFramesSpan.textContent = totalFrames;
-        }    
-
         // Function to play the animation
         function playAnimation() {
-            const interval = 500; // Adjust the interval as needed (in milliseconds)
+            //var interval = 500; // Adjust the interval as needed (in milliseconds)
 
             function animate() {
                 if (isPlaying) {
                     currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
                     drawPixels();
                     updateFrameDisplay();
-                    setTimeout(animate, interval);
+                    setTimeout(animate, delays);
                 }
             }
 
             animate();
         }
-
     // --- End Animation functions ---
 
+//  ---  function convertJTDataToPixelArrayFrames() does not work ---
+function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
+    const pixelArrayFrames = [];
+    const pixelsPerFrame = pixelWidth * pixelHeight;
+    const totalPixels = pixelsPerFrame * totalFrames;
+
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        const frameStartIndex = frameIndex * pixelsPerFrame * 3;
+        const pixelArray = [];
+
+        for (let i = 0; i < pixelHeight; i++) {
+            const row = [];
+            for (let j = 0; j < pixelWidth; j++) {
+                const pixelIndex = i * pixelWidth + j;
+                const redIndex = frameStartIndex + pixelIndex;
+                const greenIndex = frameStartIndex + pixelIndex + totalPixels; // Offset for green values
+                const blueIndex = frameStartIndex + pixelIndex + totalPixels * 2; // Offset for blue values
+
+                const red = jtData[redIndex];
+                const green = jtData[greenIndex];
+                const blue = jtData[blueIndex];
+                
+                const hexColor = rgbToHex(red, green, blue);
+                row.push(hexColor);
+            }
+            pixelArray.push(row);
+        }
+        pixelArrayFrames.push(pixelArray);
+    }
+    return pixelArrayFrames;
+}
+//   ------------------------------------------------------------------------------   
+
     // Initialize the GUI
-    pixelArrayFrames[0] = createPixelArray(96, 16); // Create pixel array
+    // Create first pixel array from selectedSize global var using rtmouseBtnColor background
+    pixelArrayFrames[0] = createPixelArray(selectedSize.split('x')[0],selectedSize.split('x')[1], rtmouseBtnColor); 
     updatePaletteIconColor();
     handleModeChange();
     drawPixels();
-init();
+    if (debug_GBL){debug_init();}  //init some parameters for debug
 });
+//////////////////end of DOMContentLoaded///////////////////////////////////////////////////////////////////////////////
 
+// --- Functions added outside of DOMContentLoaded event listener and callable from console --- ///
 
-//ken fuctions###########################################################################
-//reads animation data from coolLED v2.1.6
+        // Function to update frame display / frame count
+        function updateFrameDisplay() {
+            const currentFrameSpan = document.getElementById("currentFrame");
+            const totalFramesSpan = document.getElementById("totalFrames");
+            var ctxt="";ttxt="";
+            if (currentFrameIndex + 1 < 10){ctxt="0";}
+            if (totalFrames<10){ttxt="0";}
+            currentFrameSpan.textContent = ctxt + (currentFrameIndex + 1).toString();
+            totalFramesSpan.textContent = ttxt + (totalFrames).toString();
+            delays = parseInt(document.getElementById("delay_id").value);
+        }  
+
+// --- Reads animation and static data from coolLED v2.1.x --- //
 function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
     //set the size
     document.getElementById("sizeDropdown").value=pixelHeight.toString()+"x"+pixelWidth.toString();
@@ -702,8 +656,6 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
     currentFrameIndex=0;
     document.getElementById("backButton").click()
     const pixelArrayFrames = [];
-    //const pixelsPerFrame = pixelWidth * pixelHeight;
-    //const totalPixels = pixelsPerFrame * totalFrames;
     const pixelsPerColor = pixelWidth * pixelHeight/8   //is 64 for 16x32 file, 64*3=192 elements for 3 colors
     var i,j;var curRow;var frameIndex;var curRowx=0;
     var redArr=[];var greenArr=[];var blueArr=[];
@@ -771,7 +723,7 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
 return pixelArrayFrames
 }//function
 
-//bit shift function
+// --- bit shift function --- //
 function bitshft(myint,n){return (myint >> n) & 0x1;}
 
 function putBinaryComponent(color) {
@@ -789,16 +741,303 @@ function putBinaryComponent(color) {
             return colorMap[color];
 }            
 
-function myupdate(){
+// --- convert text color to hex value --- //
+function colorNameToHex(color){
+   const mymap={
+                "Black":"#000000", // Black
+                "Red":"#FF0000", // Red
+                "Green":"#00FF00", // Green
+                "Yellow":"#FFFF00", // Yellow
+                "Blue":"#0000FF", // Blue
+                "Magenta":"#FF00FF", // Magenta
+                "Cyan":"#00FFFF", // Cyan
+                "White":"#FFFFFF" // White
+              };
+  return mymap[color].toString();
+}
+
+// --- return RGB array from hex --- //
+function pixarrToRgb(hex) {
+  const bigint = parseInt(hex.slice(1), 16);
+  const red = (bigint >> 16) & 255;
+  const green = (bigint >> 8) & 255;
+  const blue = bigint & 255;
+  return [red, green, blue];
+}
+
+// --- fits pixelCanvasContainer to body width --- //
+function fitwidth(x){
+  var psize     = document.getElementById("pixelSizeInput");
+  var canvas = document.getElementById("pixelCanvasContainer");
+  var temp;
+
+  if (x==undefined){  //first run
+    //set to max
+    psize.value = psize.max
+    trigger();
+    setTimeout(fitwidth,1,1);
+  } else {  //subsequent runs
+    var matrixwidth = parseInt(window.getComputedStyle( canvas ).width) 
+    var bodywidth = parseInt(window.getComputedStyle( document.body ).width) 
+      if (matrixwidth > bodywidth){
+        psize.value--;
+        trigger();
+        if (psize.value > psize.min){setTimeout(fitwidth,1,1);}    
+      }
+  }
+
+  function trigger(){var myevent = new Event('input');psize.dispatchEvent(myevent)}
+}
+
+    // Function to update text display below canvas with binary representation of 3-bit color space
+    function updateTextDisplay() {
+
+            pixelArray = pixelArrayFrames[currentFrameIndex];
+
+            redBinaryArray[currentFrameIndex] =[];
+            greenBinaryArray[currentFrameIndex] = [];
+            blueBinaryArray[currentFrameIndex] = [];
+
+            const rowLength = pixelArray[0].length;
+
+            for (let j = 0; j < rowLength; j++) {
+                let redBinary = '';
+                let greenBinary = '';
+                let blueBinary = '';
+
+                for (let i = 0; i < pixelArray.length; i++) {
+                    const color = pixelArray[i][j]; 
+                    const redValue = getBinaryComponent(color, 2);
+                    const greenValue = getBinaryComponent(color, 1);
+                    const blueValue = getBinaryComponent(color, 0);
+
+                    redBinary += redValue;
+                    greenBinary += greenValue;
+                    blueBinary += blueValue;
+
+                    // Group every 8 bits and convert to decimal
+                    if (redBinary.length === 8) {
+                        redBinaryArray[currentFrameIndex].push(parseInt(redBinary, 2));
+                        redBinary = '';
+                    }
+
+                    if (greenBinary.length === 8) {
+
+                        greenBinaryArray[currentFrameIndex].push(parseInt(greenBinary, 2));
+                        greenBinary = '';
+                    }
+
+                    if (blueBinary.length === 8) {
+                        blueBinaryArray[currentFrameIndex].push(parseInt(blueBinary, 2));
+                        blueBinary = '';
+                    }
+                }
+            } // rowLength
+
+
+        const redDecimalText    = `Red: [${redBinaryArray[currentFrameIndex].join(', ')}]`;
+        const greenDecimalText  = `Green: [${greenBinaryArray[currentFrameIndex].join(', ')}]`;
+
+        const blueDecimalText   = `Blue: [${blueBinaryArray[currentFrameIndex].join(', ')}]`;
+
+
+        document.getElementById('textDisplay').textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
+    }//updateTextDisplay
+
+    // Function to draw pixels on the canvas
+    function drawPixels() {
+        const pixelCanvas       = document.getElementById("pixelCanvas");
+        pixelCanvas.innerHTML   = ""; // Clear previous pixels
+
+        const sizeDropdown      = document.getElementById("sizeDropdown");
+        selectedSize            = sizeDropdown.value;
+        const [height, width]   = selectedSize.split("x").map(Number);
+        pixelHeight             = height;
+        pixelWidth              = width;
+        
+        const pixelSizeInput    = document.getElementById("pixelSizeInput");
+        const pixelSize         = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
+
+        // Calculate the width of each pixel based on the container size and array width
+        const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;
+
+        pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
+
+        pixelArray = pixelArrayFrames[currentFrameIndex];
+
+        pixelArray.forEach((row, rowIndex) => {
+            row.forEach((color, columnIndex) => {
+            var pixel                       = document.createElement("div");
+                pixel.className             = "pixel";
+                pixel.style.backgroundColor = color;                
+                pixel.style.width           = `${pixelSize}px`;
+                pixel.style.height          = `${pixelSize}px`;
+
+                // Add click event listeners for pixel editing
+                pixel.addEventListener('mousemove', () => {togglePixel(rowIndex, columnIndex)});
+                pixel.addEventListener('mousedown', () => {mousebtn_Gbl=event.button;togglePixel(rowIndex, columnIndex)}); 
+
+                //prevent context menu when using right mouse button
+                //pixel.addEventListener("contextmenu", event => {mousebtn_Gbl=event.button;event.preventDefault();return false;});
+
+                pixelCanvas.appendChild(pixel);
+            });
+
+        });
+
+        updateTextDisplay();
+    }//drawPixels
+
+      // Function to draw pixel colors while dragging mouse
+        function togglePixel(row, col) {
+            if (mousebtn_Gbl==0){                      //will draw selectedColor when holding left mouse button
+              pixelArray[row][col] = selectedColor;
+              drawPixels();
+              updateTextDisplay();
+            } else if (mousebtn_Gbl==2) {              //will draw rtmouseBtnColor when holding right mouse button
+              pixelArray[row][col] = rtmouseBtnColor;
+              drawPixels();
+              updateTextDisplay();
+            }
+        }
+
+      // Function to get the binary component for a specific color
+        function getBinaryComponent(color, position) {
+            color = color.toUpperCase();
+
+            const colorMap = {
+                '#000000': '000', // Black
+                '#FF0000': '001', // Red
+                '#00FF00': '010', // Green
+                '#FFFF00': '011', // Yellow
+                '#0000FF': '100', // Blue
+                '#FF00FF': '101', // Magenta
+                '#00FFFF': '110', // Cyan
+                '#FFFFFF': '111' // White
+            };
+
+            currentColor = colorMap[color];
+            const binaryValue = currentColor.substring(position, position + 1) ?? '0'
+
+            return binaryValue
+        }
+
+  // --- frame swapping functions --- //
+  function swapFrames(x,y){
+    var temparr
+    if ( x > totalFrames || y > totalFrames ){return;}  //return if frames dont exist
+    if ( x < 1 || y < 1 || totalFrames == 1 ){return;}  //return if frames dont exist
+    if ( x == y ){return;}                              //return if frames are same
+    x--;y--;                                            //convert displayed frame numbers to index
+    temparr = pixelArrayFrames[y]                       //save y in temparr
+    pixelArrayFrames[y] = pixelArrayFrames[x]           //save x in y
+    pixelArrayFrames[x] = temparr                       //save y to x
+    drawPixels();setTimeout(updateFrameDisplay,100);                              
+  }
+  
+  function deleteFrame(){
+    var i,j
+    if (totalFrames>1){                                 //only delete if frames > 1
+      if (currentFrameIndex<totalFrames-1){             //if not the last frame, swap everyone down
+        for (i=currentFrameIndex;i<totalFrames-1;i++){  //-1, since last one will be deleted 
+          swapFrames(i+1,i+2)                           //+1, since swapFrames() uses displayed frame number
+        }   
+      }
+        pixelArrayFrames.length--;                      //delete last frame
+        totalFrames--;
+        currentFrameIndex=totalFrames-1;
+        drawPixels();setTimeout(updateFrameDisplay,100);
+      }                              
+  }
+
+// swap_diag dialog functions##########################################
+function swap_diag(){
+if (totalFrames==1){return;}
+if (diag_idx2>totalFrames){diag_idx2=totalFrames}
+if (diag_idx1>totalFrames){diag_idx1=totalFrames}
+if (diag_idx1==diag_idx2){diag_idx1--;}
+var x='<table border=0 style="margin-right: auto; margin-left: auto;"><tr><td class=bigbutton colspan=2>&nbsp;&nbsp;&nbsp;Swap Frames&nbsp;&nbsp;&nbsp;</td>'
++'</tr></table>'
+
++'<table border=0 cellspacing=3 style="margin-right: auto; margin-left: auto;"><tr>'
++'<td colspan=3 style="text-align:center;font-size:16px;font-weight:bold;">- Swap -</td><td></td>'
++'<td colspan=3 style="text-align:center;font-size:16px;font-weight:bold;">- with -</td></tr>'
++'<tr><td><input class=bigbutton type="button" value="&nbsp;&#9660;&nbsp;" onclick=swap_diag_btn1(-1) /></td>'
++'<td class=bigbutton id=diag_swap_id1>'+diag_idx1+'</td>'
++'<td><input class=bigbutton type="button" value="&nbsp;&#9650;&nbsp;" onclick=swap_diag_btn1(1) /></td>'
++'<td></td>'
++'<td><input class=bigbutton type="button" value="&nbsp;&#9660;&nbsp;" onclick=swap_diag_btn2(-1) /></td>'
++'<td class=bigbutton id=diag_swap_id2>'+diag_idx2+'</td>'
++'<td><input class=bigbutton type="button" value="&nbsp;&#9650;&nbsp;" onclick=swap_diag_btn2(1) /></td>'
++'</tr></table>'
+
++'<table cellpadding=6 style="width: 100%;"><tr><td>'
++'<input style="float: left; font-size: 30px; min-width: 3ch;" type="button" value="Cancel" onclick=swap_diag_close() /></td>'
++'<td><input style="float: right; font-size: 30px; min-width: 3ch;" type="button" value="OK" '
++'onclick=swap_diag_ok(swapFrames()) /></td></tr></table>'
+
+document.querySelector('.swapdiag-content').innerHTML=x
+id('swapdiagid').style.display='block';
+/*center the diag
+var myht = document.querySelector('.swapdiag-content').clientHeight
+var tht = document.querySelector('body').clientHeight
+var ans = tht/2 - myht/2
+document.querySelector('.swapdiag').style.paddingTop=ans.toString()+"px"
+*/
+}
+
+function swap_diag_close(){id('swapdiagid').style.display='none'}
+
+function swap_diag_ok(){
+  swapFrames(parseInt(diag_idx1), parseInt(diag_idx2))
+swap_diag_close()
+}
+
+function swap_diag_btn1(dir){
+  if (diag_idx1+dir>totalFrames){return;}
+  if (diag_idx1+dir<1){return;}
+  if (diag_idx1+dir == diag_idx2){
+    if (diag_idx1+dir+dir < totalFrames+1 && diag_idx1+dir+dir > 0){
+      diag_idx1+=dir;
+    }else{
+      return;
+    }
+  }
+  diag_idx1+=dir
+  id("diag_swap_id1").innerHTML=diag_idx1
+}
+
+function swap_diag_btn2(dir){
+if (diag_idx2+dir>totalFrames){return;}
+if (diag_idx2+dir<1){return;}
+  if (diag_idx2+dir == diag_idx1){
+    if (diag_idx2+dir+dir < totalFrames+1 && diag_idx2+dir+dir > 0){
+      diag_idx2+=dir;
+    }else{
+      return;
+    }
+  }
+diag_idx2+=dir
+id("diag_swap_id2").innerHTML=diag_idx2
+}
+
+function id(x){return document.getElementById(x);}
+// end swap_diag dialog functions##########################################
+
+// --- debug functions --- //
+function debug_update(){
+  //updates display, for debugging
   document.getElementById('upButton').click();document.getElementById('downButton').click();
 }
 
-function init(){
-document.getElementById("sizeDropdown").value="16x32";
-document.getElementById("customColorPicker").value="#000000"
-document.getElementById("paletteIcon").style.color="#000000"
-var myevent = new Event('change');
-document.getElementById("customColorPicker").dispatchEvent(myevent)
-document.getElementById("paintBucketButton").click();
-document.getElementById("debugToggle").click();
+function debug_init(){ 
+  //init some parameters, for debugging
+  document.getElementById("sizeDropdown").value="16x32";
+  document.getElementById("pixelSizeInput").value="15";
+  document.getElementById("customColorPicker").value="#000000"
+  document.getElementById("paletteIcon").style.color="#000000"
+  var myevent = new Event('change');
+  document.getElementById("customColorPicker").dispatchEvent(myevent)
+  document.getElementById("paintBucketButton").click();
+  document.getElementById("debugToggle").click();
 }

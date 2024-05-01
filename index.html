@@ -5,8 +5,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>JT Editor</title>
         <script src="app.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+        <!-- CDN content replaced with server-side assets -->
+        <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">  --> 
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>        --> 
+        <script src="saveas.js"></script>
         <script src="FileSaver.js"></script>
         <link rel="stylesheet" href="styles.css">
     </head>
@@ -38,45 +40,62 @@
             <label for="pixelSizeInput">Pixel Size:</label>
             <input type="number" id="pixelSizeInput" min="1" value="8" max="20">
 
-            <button id="paintBucketButton" title="Paint Bucket"><i class="fas fa-fill-drip"></i></button>
+            <!--  CDN content replaced with server-side assets -->
+            <!--<button id="paintBucketButton" title="Paint Bucket"><i class="fas fa-fill-drip"></i></button>
+            <i id="paletteIcon" class="fas fa-palette" ></i> -->
 
-            <i id="paletteIcon" class="fas fa-palette" ></i>
+            <a id="paintBucketButton" title="Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>
+            <a id="paletteIcon" title="LMB Color"><img class="icons" src="icons/paletteBlack.png"></img></a>
+            
             <select id="customColorPicker">
-                <option value="#FF0000" selected>Red</option>
+                <option value="#000000">Black</option>
+                <option value="#FFFFFF">White</option>
+                <option value="#FF0000">Red</option>
                 <option value="#00FF00">Green</option>
                 <option value="#0000FF">Blue</option>
                 <option value="#FFFF00">Yellow</option>
                 <option value="#FF00FF">Magenta</option>
                 <option value="#00FFFF">Cyan</option>
-                <option value="#000000">Black</option>
-                <option value="#FFFFFF">White</option>
             </select>
 
-            <i class="fas fa-folder" onclick="openFileInput()"></i>
+           <a id="rtclickIcon" title="RMB Color"><img class="icons" src="icons/rtBlack.png"></img></a>
+            <a id="RMBpaintBucketButton" title="RMB Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>
+            
+            <!--  CDN content replaced with server-side assets -->
+            <!--<i class="fas fa-folder" onclick="openFileInput()"></i>    
             <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt">
+            <i class="fas fa-save" onclick="saveToFile()"></i>-->
 
-            <i class="fas fa-save" onclick="saveToFile()"></i>
+            <a onclick="openFileInput()" title="Open File"><img class="icons" src="icons/folder.png"></img></a>
+            <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt">
+            <a onclick="saveToFile()" title="Save File"><img class="icons" src="icons/save.png"></img></a>
 
             <label for="formatDropdown">Format:</label>
             <select id="formatDropdown">
                 <option value="v1">v1</option>
                 <option value="v2">v2</option>
+                <option value="png">png</option>
             </select>
 
-            <i id="debugToggle" class="fa-solid fa-bug"></i>
+            <!--  CDN content replaced with server-side assets -->
+            <!--<i id="debugToggle" class="fa-solid fa-bug"></i>-->
+
+            <a id="debugToggle" title="Show/Hide RGB Array"><img class="icons" src="icons/bug.png"></a>
         </div>
 
         <div id="pixelCanvasContainer">
             <div id="pixelCanvas"></div>
         </div>
 
-        <div id="controlButtons">
+        <!--  CDN content replaced with server-side assets -->
+        <!--<div id="controlButtons">
             <button id="backButton"><i class="fas fa-step-backward"></i></button>
             <button id="playPauseButton"><i class="fas fa-play"></i>/<i class="fas fa-pause"></i></button>
             <button id="forwardButton"><i class="fas fa-step-forward"></i></button>
             <button id="plusButton"><i class="fas fa-plus"></i></button>
              <button id="cloneFrameButton" title="Clone Frame"><i class="fas fa-clone"></i></button>
             <span id="frameDisplay">Frame: <span id="currentFrame">1</span>/<span id="totalFrames">1</span></span>
+            Delay:<input style="width: 8ch;height: 2ch;"type="number" id="delay_id" min="50" value="250" max="1000" step="50">
         </div>
 
         <div id="directionButtons">
@@ -84,11 +103,38 @@
             <button id="leftButton" title="Shift Left"><i class="fas fa-arrow-left"></i></button>
             <button id="downButton" title="Shift Down"><i class="fas fa-arrow-down"></i></button>
             <button id="rightButton" title="Shift Right"><i class="fas fa-arrow-right"></i></button>
+        </div>-->
+            
+
+        <div id="controlButtons">
+          <div style="text-align:center;"><span id="frameDisplay">Frame: <span id="currentFrame">01</span>/<span id="totalFrames">01</span></span>
+           <span id="delaytxt">Delay:</span><input id="delay_id" type="number" min="50" value="250" max="1000" step="50">
+          </div>
+          <div style = "padding-bottom:10px;"></div>
+            <button id="backButton" title="Back">|&#9664;</button>       
+            <button id="playPauseButton" title="Play/Pause">&#9654;||</button> 
+            <button id="forwardButton" title="Forward">&#9654;|</button>   
+            <button id="plusButton" title="Add Frame">+</button>  
+            <button id="minusButton" title="Delete Frame">-</button>  
+            <button id="swapButton" title="Swap Frames">&#8633;</button>  
+            <button id="cloneFrameButton" title="Clone Frame"><img style="width:22px;height:22px;" src="icons/clone.png"></img></button>  
+
+        </div>
+
+        <div id="directionButtons">
+            <button id="upButton" title="Shift Up">&#9650;</button>       
+            <button id="downButton" title="Shift Down"> &#9660;</button>  
+            <button id="leftButton" title="Shift Left"> &#9664;</button>  
+            <button id="rightButton" title="Shift Right"> &#9654;</button> 
         </div>
 
         <div id="arrayOutput">
             <pre id="textDisplay" style="display: none;"></pre>
         </div>
-
+<!--swap dialog -->
+<div id='swapdiagid' class='swapdiag'>
+<div class='swapdiag-content'>
+</div></div>
+<!--swap dialog -->
     </body>
     </html>
