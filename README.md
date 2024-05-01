@@ -12,14 +12,14 @@ Please contribute any changes you make on your system by sending a pull request!
 
 <b>Panel Communication</b>
 
-CoolLED1248
+CoolLED1248<br>
 Versions 2.x of the Android app can import and export JT files.  If you have problems importing or with other functions, try version 2.1.4.
 
-CoolLEDX Driver
+CoolLEDX Driver<br>
 If you want to send commands to a panel with a PC or SBC, you can try the coolledx python driver.  This is a work-in-progress so some capabilities may improve as the project matures.
 
-To install the CoolLEDX driver on your system:
-1.  clone the repository to your PC.
+To install the CoolLEDX driver on your system:<br>
+1.  clone the repository to your PC.<br>
 
         git clone https://github.com/UpDryTwist/coolledx-driver.git
 
