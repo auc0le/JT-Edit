@@ -1,3 +1,10 @@
+<b>How to load the editor</b>
+
+You can find the latest version online here: https://jt-edit.com/
+or you can simply download the repo, unzip the folder, and load index.html in the browser of your choice. 
+
+<b>What is this and why</b>
+
 The CoolLED1248 program controls color LED panels and uses .JT files.
 
 However, it is horrible to edit these on the mobile phone. This project aims to create a browser based editor to allow for computer based editing.
@@ -15,7 +22,9 @@ Please contribute any changes you make on your system by sending a pull request!
 CoolLED1248<br>
 Versions 2.x of the Android app can import and export JT files.  If you have problems importing or with other functions, try version 2.1.4.
 
-CoolLEDX Driver<br>
+On Android save the JT file to your phone and then use the "my files" app to locate the file.  Tap it once and select open with CoolEdit1248 app.  It should import and you are good to go!
+
+CoolLEDX Driver (computer only)<br>
 If you want to send commands to a panel with a PC or SBC, you can try the coolledx python driver.  This is a work-in-progress so some capabilities may improve as the project matures.
 
 To install the CoolLEDX driver on your system:<br>
