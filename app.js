@@ -37,7 +37,56 @@ let graffitiType    = 1;
 let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
+let colorFormat     = '3bit'; // '3bit' or '24bit'
 
+// Function to convert RGB to hex
+function rgbToHex(r, g, b) {
+    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+}
+
+// Function to quantize color to 3-bit color space using Euclidean distance
+function quantizeColor(red, green, blue) {
+    // Define a set of eight predefined colors in 3-bit color space
+    const colors = [
+        [255, 0, 0], // Red
+        [0, 255, 0], // Green
+        [0, 0, 255], // Blue
+        [255, 255, 0], // Yellow
+        [255, 0, 255], // Magenta
+        [0, 255, 255], // Cyan
+        [255, 255, 255], // White
+        [0, 0, 0] // Black
+    ];
+
+    // Find the nearest color in the predefined set using Euclidean distance
+    const nearestColor = colors.reduce((nearest, color) => {
+        const distance = Math.sqrt(
+            Math.pow(red - color[0], 2) +
+            Math.pow(green - color[1], 2) +
+            Math.pow(blue - color[2], 2)
+        );
+
+        return distance < nearest.distance ? {
+            color,
+            distance
+        } : nearest;
+    }, {
+        color: null,
+        distance: Infinity
+    }).color;
+
+    return rgbToHex(...nearestColor);
+}
+
+// Helper function to convert hex to RGB values
+function hexToRgbValues(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : {r: 0, g: 0, b: 0};
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('pixelCanvas');
@@ -45,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const customColorPicker = document.getElementById('customColorPicker');
     const paletteIcon = document.getElementById('paletteIcon');
     const imageInput = document.getElementById('imageInput');
+    const colorFormatDropdown = document.getElementById('colorFormatDropdown');
     
     //set customColorPicker dropdown option to the startColor global var
     customColorPicker.value=startColor;
@@ -151,6 +201,54 @@ document.addEventListener('DOMContentLoaded', function() {
             const formatDropdown = document.getElementById("formatDropdown");
             selectedFormat = formatDropdown.value;
         }
+
+        // Function to handle color format change
+        function handleColorFormatChange() {
+            const colorFormatDropdown = document.getElementById("colorFormatDropdown");
+            const oldFormat = colorFormat;
+            colorFormat = colorFormatDropdown.value;
+            
+            // Update graffitiType and aniType based on color format
+            if (colorFormat === '24bit') {
+                graffitiType = 2;
+                aniType = 2;
+            } else {
+                graffitiType = 1;
+                aniType = 1;
+            }
+            
+            // Convert existing pixel data if format changed
+            if (oldFormat !== colorFormat && pixelArrayFrames && pixelArrayFrames.length > 0) {
+                convertPixelArrayFormat(oldFormat, colorFormat);
+                drawPixels();
+                updateTextDisplay();
+            }
+            
+            console.log("Color format changed to:", colorFormat);
+        }
+
+        // Function to convert pixel array between formats
+        function convertPixelArrayFormat(fromFormat, toFormat) {
+            if (fromFormat === toFormat) return;
+            
+            for (let frameIndex = 0; frameIndex < pixelArrayFrames.length; frameIndex++) {
+                const frame = pixelArrayFrames[frameIndex];
+                for (let row = 0; row < frame.length; row++) {
+                    for (let col = 0; col < frame[row].length; col++) {
+                        const currentColor = frame[row][col];
+                        
+                        if (fromFormat === '24bit' && toFormat === '3bit') {
+                            // Convert 24-bit to 3-bit by quantizing
+                            const rgb = hexToRgbValues(currentColor);
+                            const quantizedColor = quantizeColor(rgb.r, rgb.g, rgb.b);
+                            frame[row][col] = quantizedColor;
+                        }
+                        // For 3-bit to 24-bit, no conversion needed - colors are already valid hex
+                    }
+                }
+            }
+        }
+
 
         // Function to handle paint bucket button click
         function handlePaintBucket() {
@@ -329,6 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
+    document.getElementById("colorFormatDropdown").addEventListener("change", handleColorFormatChange);
     document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
 
     // Function to open file input
@@ -359,44 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return [red, green, blue];
         }
 
-        // Function to convert RGB to hex
-        function rgbToHex(r, g, b) {
-            return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
-        }
 
-        // Function to quantize color to 3-bit color space using Euclidean distance
-        function quantizeColor(red, green, blue) {
-            // Define a set of eight predefined colors in 3-bit color space
-            const colors = [
-                [255, 0, 0], // Red
-                [0, 255, 0], // Green
-                [0, 0, 255], // Blue
-                [255, 255, 0], // Yellow
-                [255, 0, 255], // Magenta
-                [0, 255, 255], // Cyan
-                [255, 255, 255], // White
-                [0, 0, 0] // Black
-            ];
-
-            // Find the nearest color in the predefined set using Euclidean distance
-            const nearestColor = colors.reduce((nearest, color) => {
-                const distance = Math.sqrt(
-                    Math.pow(red - color[0], 2) +
-                    Math.pow(green - color[1], 2) +
-                    Math.pow(blue - color[2], 2)
-                );
-
-                return distance < nearest.distance ? {
-                    color,
-                    distance
-                } : nearest;
-            }, {
-                color: null,
-                distance: Infinity
-            }).color;
-
-            return rgbToHex(...nearestColor);
-        }
      
     // --- End Image Utility functions ---
 
@@ -433,7 +495,18 @@ function loadPixelArrayFromJTFile(data) {
             pixelWidth      = jsonData.data.pixelWidth;
             delays          = jsonData.data.delays;
             document.getElementById("delay_id").value=delays.toString();
-            pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
+            
+            // Detect format based on aniType and set colorFormat
+            aniType = jsonData.data.aniType || 1;
+            if (aniType === 2) {
+                colorFormat = '24bit';
+                console.log("24-bit RGB animation file detected");
+                pixelArrayFrames = convertToPixelArrayFramesType2(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
+            } else {
+                colorFormat = '3bit';
+                console.log("3-bit indexed animation file detected");
+                pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.aniData, pixelWidth, pixelHeight, totalFrames);
+            }
 
         } else if (dataType === 1 && jsonData.data.graffitiData) {
             console.log("static JT file");
@@ -441,12 +514,25 @@ function loadPixelArrayFromJTFile(data) {
             totalFrames = 1;
             pixelHeight     = jsonData.data.pixelHeight;
             pixelWidth      = jsonData.data.pixelWidth;
-            pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);    
-            //function convertJTDataToPixelArrayFrames() does not work 
+            
+            // Detect format based on graffitiType and set colorFormat
+            graffitiType = jsonData.data.graffitiType || 1;
+            if (graffitiType === 2) {
+                colorFormat = '24bit';
+                console.log("24-bit RGB static file detected");
+                pixelArrayFrames = convertToPixelArrayFramesType2(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);
+            } else {
+                colorFormat = '3bit';
+                console.log("3-bit indexed static file detected");
+                pixelArrayFrames = convertToPixelArrayFrames(jsonData.data.graffitiData, pixelWidth, pixelHeight, totalFrames);
+            }
 
         } else {
             console.error('Unsupported data type');
         }
+        
+        // Update the color format dropdown to match detected format
+        document.getElementById("colorFormatDropdown").value = colorFormat;
         //update mode dropdown
         document.getElementById("modeDropdown").value=currentMode;handleModeChange();
         drawPixels();
@@ -723,6 +809,88 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
 return pixelArrayFrames
 }//function
 
+// --- Convert Type 2 (24-bit RGB) JT data to pixel array frames --- //
+function convertToPixelArrayFramesType2(jtData, pixelWidth, pixelHeight, totalFrames) {
+    document.getElementById("sizeDropdown").value = pixelHeight.toString() + "x" + pixelWidth.toString();
+    currentFrameIndex = 0;
+    
+    const pixelArrayFrames = [];
+    const pixelsPerFrame = pixelWidth * pixelHeight;
+    
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        const pixelArray = [];
+        const frameStartIndex = frameIndex * pixelsPerFrame * 3; // 3 bytes per pixel (RGB)
+        
+        // Initialize the pixel array with the correct dimensions
+        for (let row = 0; row < pixelHeight; row++) {
+            pixelArray[row] = new Array(pixelWidth);
+        }
+        
+        // Handle different panel layouts based on dimensions
+        if (pixelHeight === 24 && (pixelWidth === 48 || pixelWidth === 64)) {
+            // 24x48 or 24x64 panels use dual-block, column-major format
+            convertType2DualBlock(jtData, frameStartIndex, pixelArray, pixelWidth, pixelHeight);
+        } else {
+            // Standard format for other sizes (row-major)
+            convertType2Standard(jtData, frameStartIndex, pixelArray, pixelWidth, pixelHeight);
+        }
+        
+        pixelArrayFrames.push(pixelArray);
+    }
+    
+    return pixelArrayFrames;
+}
+
+// --- Convert Type 2 data for dual-block panels (24x48, 24x64) --- //
+function convertType2DualBlock(jtData, frameStartIndex, pixelArray, pixelWidth, pixelHeight) {
+    const blockWidth = pixelWidth / 2; // Each block is half the total width
+    const blockSize = blockWidth * pixelHeight * 3; // RGB bytes per block
+    
+    // Process Left Block (columns 0 to blockWidth-1)
+    let dataIndex = frameStartIndex;
+    for (let col = 0; col < blockWidth; col++) {
+        for (let row = 0; row < pixelHeight; row++) {
+            const red = jtData[dataIndex];
+            const green = jtData[dataIndex + 1];
+            const blue = jtData[dataIndex + 2];
+            dataIndex += 3;
+            
+            const hexColor = rgbToHex(red, green, blue);
+            pixelArray[row][col] = hexColor;
+        }
+    }
+    
+    // Process Right Block (columns blockWidth to pixelWidth-1)
+    for (let col = blockWidth; col < pixelWidth; col++) {
+        for (let row = 0; row < pixelHeight; row++) {
+            const red = jtData[dataIndex];
+            const green = jtData[dataIndex + 1];
+            const blue = jtData[dataIndex + 2];
+            dataIndex += 3;
+            
+            const hexColor = rgbToHex(red, green, blue);
+            pixelArray[row][col] = hexColor;
+        }
+    }
+}
+
+// --- Convert Type 2 data for standard panels (row-major format) --- //
+function convertType2Standard(jtData, frameStartIndex, pixelArray, pixelWidth, pixelHeight) {
+    let dataIndex = frameStartIndex;
+    
+    for (let row = 0; row < pixelHeight; row++) {
+        for (let col = 0; col < pixelWidth; col++) {
+            const red = jtData[dataIndex];
+            const green = jtData[dataIndex + 1];
+            const blue = jtData[dataIndex + 2];
+            dataIndex += 3;
+            
+            const hexColor = rgbToHex(red, green, blue);
+            pixelArray[row][col] = hexColor;
+        }
+    }
+}
+
 // --- bit shift function --- //
 function bitshft(myint,n){return (myint >> n) & 0x1;}
 
@@ -789,60 +957,90 @@ function fitwidth(x){
   function trigger(){var myevent = new Event('input');psize.dispatchEvent(myevent)}
 }
 
-    // Function to update text display below canvas with binary representation of 3-bit color space
+    // Function to update text display below canvas with RGB data representation
     function updateTextDisplay() {
+        pixelArray = pixelArrayFrames[currentFrameIndex];
 
-            pixelArray = pixelArrayFrames[currentFrameIndex];
+        if (colorFormat === '24bit') {
+            // For 24-bit RGB format, show direct RGB byte values
+            updateTextDisplay24bit();
+        } else {
+            // For 3-bit format, show bit-packed binary representation
+            updateTextDisplay3bit();
+        }
+    }//updateTextDisplay
 
-            redBinaryArray[currentFrameIndex] =[];
-            greenBinaryArray[currentFrameIndex] = [];
-            blueBinaryArray[currentFrameIndex] = [];
+    // Function to update text display for 24-bit RGB format
+    function updateTextDisplay24bit() {
+        const redArray = [];
+        const greenArray = [];
+        const blueArray = [];
 
-            const rowLength = pixelArray[0].length;
+        // Extract RGB values in row-major order (same as JT file format)
+        for (let row = 0; row < pixelArray.length; row++) {
+            for (let col = 0; col < pixelArray[row].length; col++) {
+                const hexColor = pixelArray[row][col];
+                const rgb = hexToRgbValues(hexColor);
+                redArray.push(rgb.r);
+                greenArray.push(rgb.g);
+                blueArray.push(rgb.b);
+            }
+        }
 
-            for (let j = 0; j < rowLength; j++) {
-                let redBinary = '';
-                let greenBinary = '';
-                let blueBinary = '';
-
-                for (let i = 0; i < pixelArray.length; i++) {
-                    const color = pixelArray[i][j]; 
-                    const redValue = getBinaryComponent(color, 2);
-                    const greenValue = getBinaryComponent(color, 1);
-                    const blueValue = getBinaryComponent(color, 0);
-
-                    redBinary += redValue;
-                    greenBinary += greenValue;
-                    blueBinary += blueValue;
-
-                    // Group every 8 bits and convert to decimal
-                    if (redBinary.length === 8) {
-                        redBinaryArray[currentFrameIndex].push(parseInt(redBinary, 2));
-                        redBinary = '';
-                    }
-
-                    if (greenBinary.length === 8) {
-
-                        greenBinaryArray[currentFrameIndex].push(parseInt(greenBinary, 2));
-                        greenBinary = '';
-                    }
-
-                    if (blueBinary.length === 8) {
-                        blueBinaryArray[currentFrameIndex].push(parseInt(blueBinary, 2));
-                        blueBinary = '';
-                    }
-                }
-            } // rowLength
-
-
-        const redDecimalText    = `Red: [${redBinaryArray[currentFrameIndex].join(', ')}]`;
-        const greenDecimalText  = `Green: [${greenBinaryArray[currentFrameIndex].join(', ')}]`;
-
-        const blueDecimalText   = `Blue: [${blueBinaryArray[currentFrameIndex].join(', ')}]`;
-
+        const redDecimalText = `Red (24-bit): [${redArray.join(', ')}]`;
+        const greenDecimalText = `Green (24-bit): [${greenArray.join(', ')}]`;
+        const blueDecimalText = `Blue (24-bit): [${blueArray.join(', ')}]`;
 
         document.getElementById('textDisplay').textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
-    }//updateTextDisplay
+    }
+
+    // Function to update text display for 3-bit indexed format
+    function updateTextDisplay3bit() {
+        redBinaryArray[currentFrameIndex] = [];
+        greenBinaryArray[currentFrameIndex] = [];
+        blueBinaryArray[currentFrameIndex] = [];
+
+        const rowLength = pixelArray[0].length;
+
+        for (let j = 0; j < rowLength; j++) {
+            let redBinary = '';
+            let greenBinary = '';
+            let blueBinary = '';
+
+            for (let i = 0; i < pixelArray.length; i++) {
+                const color = pixelArray[i][j]; 
+                const redValue = getBinaryComponent(color, 2);
+                const greenValue = getBinaryComponent(color, 1);
+                const blueValue = getBinaryComponent(color, 0);
+
+                redBinary += redValue;
+                greenBinary += greenValue;
+                blueBinary += blueValue;
+
+                // Group every 8 bits and convert to decimal
+                if (redBinary.length === 8) {
+                    redBinaryArray[currentFrameIndex].push(parseInt(redBinary, 2));
+                    redBinary = '';
+                }
+
+                if (greenBinary.length === 8) {
+                    greenBinaryArray[currentFrameIndex].push(parseInt(greenBinary, 2));
+                    greenBinary = '';
+                }
+
+                if (blueBinary.length === 8) {
+                    blueBinaryArray[currentFrameIndex].push(parseInt(blueBinary, 2));
+                    blueBinary = '';
+                }
+            }
+        } // rowLength
+
+        const redDecimalText = `Red (3-bit): [${redBinaryArray[currentFrameIndex].join(', ')}]`;
+        const greenDecimalText = `Green (3-bit): [${greenBinaryArray[currentFrameIndex].join(', ')}]`;
+        const blueDecimalText = `Blue (3-bit): [${blueBinaryArray[currentFrameIndex].join(', ')}]`;
+
+        document.getElementById('textDisplay').textContent = `${redDecimalText}\n\n${greenDecimalText}\n\n${blueDecimalText}`;
+    }
 
     // Function to draw pixels on the canvas
     function drawPixels() {

@@ -28,17 +28,24 @@
     // Function to generate JSON data for .jt file
     function generateJsonData() {
        
-      //update xxxBinaryArrays
-      var tempFrameIndex = currentFrameIndex
-      if (currentMode == "static") {
-        currentFrameIndex=0;updateTextDisplay();
-      }else{
-        for (var i=0;i<totalFrames;i++){currentFrameIndex=i;updateTextDisplay();}
+      let graffitiDataArray;
+      
+      if (colorFormat === '24bit') {
+        // Generate Type 2 (24-bit RGB) data array
+        graffitiDataArray = generateType2DataArray();
+      } else {
+        // Generate Type 1 (3-bit indexed) data array using existing logic
+        var tempFrameIndex = currentFrameIndex
+        if (currentMode == "static") {
+          currentFrameIndex=0;updateTextDisplay();
+        }else{
+          for (var i=0;i<totalFrames;i++){currentFrameIndex=i;updateTextDisplay();}
+        }
+        currentFrameIndex = tempFrameIndex 
+        graffitiDataArray = [...redBinaryArray.flat(), ...greenBinaryArray.flat(), ...blueBinaryArray.flat()];
       }
-      currentFrameIndex = tempFrameIndex 
-
-        let graffitiDataArray = [...redBinaryArray.flat(), ...greenBinaryArray.flat(), ...blueBinaryArray.flat()];
-        let jsonData = "";
+      
+      let jsonData = "";
 
         if (selectedFormat == "v1") {
 
@@ -129,4 +136,76 @@ function savePixelArrayAsImage(fn) {
   document.body.appendChild(dlLink);
   dlLink.click();
   document.body.removeChild(dlLink);
+}
+
+// Function to generate Type 2 (24-bit RGB) data array
+function generateType2DataArray() {
+  let dataArray = [];
+  
+  if (currentMode === "static") {
+    // Static image - single frame
+    const frame = pixelArrayFrames[0];
+    dataArray = generateType2FrameData(frame);
+  } else if (currentMode === "animation") {
+    // Animation - multiple frames
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+      const frame = pixelArrayFrames[frameIndex];
+      const frameData = generateType2FrameData(frame);
+      dataArray = dataArray.concat(frameData);
+    }
+  }
+  
+  return dataArray;
+}
+
+// Function to generate Type 2 data for a single frame
+function generateType2FrameData(frame) {
+  const frameHeight = frame.length;
+  const frameWidth = frame[0].length;
+  let dataArray = [];
+  
+  // Handle different panel layouts based on dimensions
+  if (frameHeight === 24 && (frameWidth === 48 || frameWidth === 64)) {
+    // 24x48 or 24x64 panels use dual-block, column-major format
+    const blockWidth = frameWidth / 2;
+    
+    // Generate Left Block (columns 0 to blockWidth-1) in column-major order
+    for (let col = 0; col < blockWidth; col++) {
+      for (let row = 0; row < frameHeight; row++) {
+        const hexColor = frame[row][col];
+        const rgb = hexToRgb(hexColor);
+        dataArray.push(rgb.r, rgb.g, rgb.b);
+      }
+    }
+    
+    // Generate Right Block (columns blockWidth to frameWidth-1) in column-major order
+    for (let col = blockWidth; col < frameWidth; col++) {
+      for (let row = 0; row < frameHeight; row++) {
+        const hexColor = frame[row][col];
+        const rgb = hexToRgb(hexColor);
+        dataArray.push(rgb.r, rgb.g, rgb.b);
+      }
+    }
+  } else {
+    // Standard format for other sizes (row-major)
+    for (let row = 0; row < frameHeight; row++) {
+      for (let col = 0; col < frameWidth; col++) {
+        const hexColor = frame[row][col];
+        const rgb = hexToRgb(hexColor);
+        dataArray.push(rgb.r, rgb.g, rgb.b);
+      }
+    }
+  }
+  
+  return dataArray;
+}
+
+// Function to convert hex color to RGB values
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 }
