@@ -41,6 +41,14 @@
 
             <label for="pixelSizeInput">Pixel Size:</label>
             <input type="number" id="pixelSizeInput" min="1" value="8" max="20">
+            
+            <button id="zoomOutButton" title="Zoom Out (Manual)">-</button>
+            <button id="fitToScreenButton" title="Fit to Screen (One-time optimization)">⌘</button>
+            <button id="zoomInButton" title="Zoom In (Manual)">+</button>
+            <label id="autoScaleLabel">
+                <input type="checkbox" id="autoScaleToggle" checked> Auto Scale
+                <span id="autoScaleStatus" class="scale-status">ON</span>
+            </label>
 
             <!--  CDN content replaced with server-side assets -->
             <!--<button id="paintBucketButton" title="Paint Bucket"><i class="fas fa-fill-drip"></i></button>

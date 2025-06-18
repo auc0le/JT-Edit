@@ -10,10 +10,19 @@ var jtFileName          = "image.jt";          //default save filename for jt fi
 var imageFileName       = "coolLED_img.png";   //default save filename for image files
 var animationFileName   = "coolLED_ani.png";   //base save filename for animation files
 var debug_GBL=false;                           //set to false to disable the debug_init() function
+var autoScaling=true;                          //enable automatic responsive pixel scaling
 
 //globals for swap frames dialog
 var diag_idx1=1;                               
-var diag_idx2=2;                               
+var diag_idx2=2;
+
+// Screen breakpoints for responsive scaling
+const SCREEN_BREAKPOINTS = {
+    mobile: { maxWidth: 768, scalingFactor: 0.95, margin: 20 },
+    tablet: { maxWidth: 1024, scalingFactor: 0.85, margin: 40 },
+    desktop: { maxWidth: 1920, scalingFactor: 0.75, margin: 60 },
+    ultrawide: { maxWidth: Infinity, scalingFactor: 0.65, margin: 80 }
+};                               
 
 // global vars for GUI
 var selectedColor
@@ -356,6 +365,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update your pixel array and canvas size here
             pixelArrayFrames[currentFrameIndex] = createPixelArray(height, width, rtmouseBtnColor);//use rtmouseBtnColor bg 
+            
+            // Apply responsive scaling for new size
+            applyResponsiveScaling();
+            
             drawPixels();
             updateTextDisplay();
         }
@@ -514,6 +527,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("colorFormatDropdown").addEventListener("change", handleColorFormatChange);
     document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
 
+    // Zoom control event listeners
+    document.getElementById("zoomInButton").addEventListener("click", zoomIn);
+    document.getElementById("zoomOutButton").addEventListener("click", zoomOut);
+    document.getElementById("fitToScreenButton").addEventListener("click", fitToScreen);
+    document.getElementById("autoScaleToggle").addEventListener("change", toggleAutoScale);
+
     // Function to open file input
     window.openFileInput = function() {
         imageInput.click();
@@ -525,6 +544,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
     document.getElementById("minusButton").addEventListener("click", () => handleButtonClick("minusButton"));
     document.getElementById("swapButton").addEventListener("click", () => handleButtonClick("swapButton"));
+
+    // Window resize listener for responsive scaling
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            applyResponsiveScaling();
+        }, 250); // Debounce resize events
+    });
 
     // --- End Binding of event listeners ---
 
@@ -619,6 +647,10 @@ function loadPixelArrayFromJTFile(data) {
         document.getElementById("colorFormatDropdown").value = colorFormat;
         //update mode dropdown
         document.getElementById("modeDropdown").value=currentMode;handleModeChange();
+        
+        // Apply responsive scaling for loaded file
+        applyResponsiveScaling();
+        
         drawPixels();
         updateTextDisplay();
 
@@ -661,6 +693,10 @@ function loadPixelArrayFromJTFile(data) {
         }
 
         pixelArrayFrames[currentFrameIndex] = pixelArray;
+        
+        // Apply responsive scaling for loaded image
+        applyResponsiveScaling();
+        
         drawPixels();
         updateTextDisplay();
     }
@@ -799,8 +835,13 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
     pixelArrayFrames[0] = createPixelArray(selectedSize.split('x')[0],selectedSize.split('x')[1], rtmouseBtnColor); 
     updatePaletteIconColor();
     handleModeChange();
-    drawPixels();
     updateColorPickerVisibility(); // Initialize color picker visibility
+    updateAutoScaleStatus(); // Initialize auto-scale status indicator
+    
+    // Apply initial responsive scaling
+    applyResponsiveScaling();
+    drawPixels();
+    
     if (debug_GBL){debug_init();}  //init some parameters for debug
 });
 //////////////////end of DOMContentLoaded///////////////////////////////////////////////////////////////////////////////
@@ -1018,7 +1059,60 @@ function pixarrToRgb(hex) {
   return [red, green, blue];
 }
 
-// --- fits pixelCanvasContainer to body width --- //
+// --- Enhanced responsive pixel scaling system --- //
+function getScreenBreakpoint() {
+    const screenWidth = window.innerWidth;
+    
+    for (const [breakpointName, config] of Object.entries(SCREEN_BREAKPOINTS)) {
+        if (screenWidth <= config.maxWidth) {
+            return { name: breakpointName, ...config };
+        }
+    }
+    return { name: 'ultrawide', ...SCREEN_BREAKPOINTS.ultrawide };
+}
+
+function calculateOptimalPixelSize(pixelWidth, pixelHeight, forceCalculation = false) {
+    // If auto-scaling is off and this isn't a forced calculation (like Fit to Screen), return current value
+    if (!autoScaling && !forceCalculation) {
+        return parseInt(document.getElementById("pixelSizeInput").value) || 8;
+    }
+    
+    const breakpoint = getScreenBreakpoint();
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Calculate available space accounting for UI elements and margins
+    const availableWidth = (screenWidth - breakpoint.margin) * breakpoint.scalingFactor;
+    const availableHeight = (screenHeight - 200) * breakpoint.scalingFactor; // 200px for UI elements
+    
+    // Calculate maximum pixel size that fits both dimensions
+    const maxPixelWidth = Math.floor(availableWidth / pixelWidth);
+    const maxPixelHeight = Math.floor(availableHeight / pixelHeight);
+    
+    // Use the smaller dimension to ensure it fits, constrained by min/max values
+    const optimalSize = Math.max(1, Math.min(maxPixelWidth, maxPixelHeight, 20));
+    
+    console.log(`Screen: ${breakpoint.name}, Array: ${pixelWidth}x${pixelHeight}, Optimal size: ${optimalSize}px`);
+    return optimalSize;
+}
+
+function applyResponsiveScaling() {
+    if (!autoScaling) return;
+    
+    const sizeDropdown = document.getElementById("sizeDropdown");
+    const selectedSize = sizeDropdown.value;
+    const [height, width] = selectedSize.split("x").map(Number);
+    
+    const optimalSize = calculateOptimalPixelSize(width, height);
+    const pixelSizeInput = document.getElementById("pixelSizeInput");
+    
+    if (pixelSizeInput.value != optimalSize) {
+        pixelSizeInput.value = optimalSize;
+        drawPixels(); // Redraw with new pixel size
+    }
+}
+
+// --- Legacy fitwidth function (enhanced) --- //
 function fitwidth(x){
   var psize     = document.getElementById("pixelSizeInput");
   var canvas = document.getElementById("pixelCanvasContainer");
@@ -1040,6 +1134,75 @@ function fitwidth(x){
   }
 
   function trigger(){var myevent = new Event('input');psize.dispatchEvent(myevent)}
+}
+
+// --- Fit to screen function (one-time optimization) --- //
+function fitToScreen() {
+    // Calculate and apply optimal size once, without enabling auto-scaling
+    const sizeDropdown = document.getElementById("sizeDropdown");
+    const selectedSize = sizeDropdown.value;
+    const [height, width] = selectedSize.split("x").map(Number);
+    
+    // Force calculation even if auto-scaling is disabled
+    const optimalSize = calculateOptimalPixelSize(width, height, true);
+    const pixelSizeInput = document.getElementById("pixelSizeInput");
+    
+    // Apply the optimal size but keep current auto-scaling preference
+    pixelSizeInput.value = optimalSize;
+    drawPixels();
+    
+    console.log(`Fit to Screen: Applied optimal size ${optimalSize}px (Auto Scale: ${autoScaling ? 'ON' : 'OFF'})`);
+}
+
+// --- Zoom control functions --- //
+function zoomIn() {
+    const pixelSizeInput = document.getElementById("pixelSizeInput");
+    const currentSize = parseInt(pixelSizeInput.value);
+    const newSize = Math.min(currentSize + 1, 20);
+    
+    if (newSize !== currentSize) {
+        autoScaling = false;
+        document.getElementById("autoScaleToggle").checked = false;
+        updateAutoScaleStatus();
+        pixelSizeInput.value = newSize;
+        drawPixels();
+    }
+}
+
+function zoomOut() {
+    const pixelSizeInput = document.getElementById("pixelSizeInput");
+    const currentSize = parseInt(pixelSizeInput.value);
+    const newSize = Math.max(currentSize - 1, 1);
+    
+    if (newSize !== currentSize) {
+        autoScaling = false;
+        document.getElementById("autoScaleToggle").checked = false;
+        updateAutoScaleStatus();
+        pixelSizeInput.value = newSize;
+        drawPixels();
+    }
+}
+
+function toggleAutoScale() {
+    const autoScaleToggle = document.getElementById("autoScaleToggle");
+    autoScaling = autoScaleToggle.checked;
+    
+    updateAutoScaleStatus();
+    
+    if (autoScaling) {
+        applyResponsiveScaling();
+    }
+}
+
+function updateAutoScaleStatus() {
+    const statusElement = document.getElementById("autoScaleStatus");
+    if (autoScaling) {
+        statusElement.textContent = "ON";
+        statusElement.className = "scale-status on";
+    } else {
+        statusElement.textContent = "OFF";
+        statusElement.className = "scale-status off";
+    }
 }
 
     // Function to update text display below canvas with RGB data representation
