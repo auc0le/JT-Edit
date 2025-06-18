@@ -22,7 +22,40 @@ const SCREEN_BREAKPOINTS = {
     tablet: { maxWidth: 1024, scalingFactor: 0.85, margin: 40 },
     desktop: { maxWidth: 1920, scalingFactor: 0.75, margin: 60 },
     ultrawide: { maxWidth: Infinity, scalingFactor: 0.65, margin: 80 }
-};                               
+};
+
+// Function to calculate dynamic max pixel size based on canvas dimensions
+function getDynamicMaxPixelSize(canvasWidth, canvasHeight) {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Reserve space for UI elements (toolbars, margins, etc.)
+    const availableWidth = screenWidth - 100; // 100px for margins and UI
+    const availableHeight = screenHeight - 300; // 300px for toolbars and UI
+    
+    // Calculate theoretical max pixel size for each dimension
+    const maxWidthPixelSize = Math.floor(availableWidth / canvasWidth);
+    const maxHeightPixelSize = Math.floor(availableHeight / canvasHeight);
+    
+    // Use the smaller of the two to ensure it fits, with absolute limits
+    const dynamicMax = Math.min(maxWidthPixelSize, maxHeightPixelSize);
+    
+    // Apply reasonable bounds: minimum 20px, maximum 100px
+    return Math.max(20, Math.min(dynamicMax, 100));
+}
+
+// Function to update pixel size input max attribute based on current canvas size
+function updatePixelSizeInputMax() {
+    const sizeDropdown = document.getElementById("sizeDropdown");
+    const selectedSize = sizeDropdown.value;
+    const [height, width] = selectedSize.split("x").map(Number);
+    const dynamicMax = getDynamicMaxPixelSize(width, height);
+    
+    const pixelSizeInput = document.getElementById("pixelSizeInput");
+    pixelSizeInput.max = dynamicMax;
+    
+    console.log(`Updated pixel size max to ${dynamicMax} for canvas ${width}x${height}`);
+}                               
 
 // global vars for GUI
 var selectedColor
@@ -329,14 +362,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Event listener for palette icon click
-        paletteIcon.addEventListener('click', function() {
-            openColorPicker();
-        });
+        // Event listener for palette icon click - removed (now using unified color selector)
 
-        // Event listener for right click icon click
-        document.getElementById("rtclickIcon").style.color = rtmouseBtnColor
-        document.getElementById("rtclickIcon").addEventListener("mousedown", changermbColor);
+        // Event listener for right click icon click - removed (now using unified color selector)
         // Event listener for document, disable context menu and assign mousebtn_Gbl event.button
         document.addEventListener("contextmenu", event => {mousebtn_Gbl=event.button;event.preventDefault();return false;});
 
@@ -366,6 +394,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update your pixel array and canvas size here
             pixelArrayFrames[currentFrameIndex] = createPixelArray(height, width, rtmouseBtnColor);//use rtmouseBtnColor bg 
             
+            // Update pixel size input max based on new canvas size
+            updatePixelSizeInputMax();
+            
             // Apply responsive scaling for new size
             applyResponsiveScaling();
             
@@ -385,12 +416,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
 
-        // Function to update palette icon color
+        // Function to update palette icon color (legacy function - now updates color previews)
         function updatePaletteIconColor() {
-          var el = document.getElementById("paletteIcon")
-          var dd = document.getElementById("customColorPicker")
-          var clrtxt = dd.options[dd.selectedIndex].innerText
-          el.childNodes[0].src="icons/palette"+clrtxt+".png"
+          // Legacy function now just updates color previews since we have unified color selector
+          updateColorPreviews();
         }
         
         // Advances to next color on paletteIcon click
@@ -412,25 +441,22 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }
 
-        // Advances to next color on rtclickIcon click
+        // Advances to next color for background (updated for unified color selector)
         function changermbColor() {   
-          var dd = document.getElementById("customColorPicker")   
-          var el = document.getElementById("rtclickIcon").childNodes[0]
-          var curcolor = el.src.split("/")[el.src.split("/").length-1].replace("rt","").replace(".png","")
-          var nextcolor
-          //find next color
-            for (var i=0;i<dd.options.length;i++){
-              if (dd.options[i].innerText == curcolor){
-                if (i<dd.options.length-1){
-                nextcolor = dd.options[i+1].innerText
-                } else {  
-                nextcolor = dd.options[0].innerText
-                }
-                break;
-              }
-            }//for
-          el.src="icons/rt"+nextcolor+".png"   
-          rtmouseBtnColor = colorNameToHex(nextcolor);        
+          var dd = document.getElementById("customColorPicker")
+          var curcolorHex = rtmouseBtnColor;
+          var nextcolorIndex = 0;
+          
+          // Find current color in dropdown
+          for (var i=0; i<dd.options.length; i++){
+            if (dd.options[i].value == curcolorHex){
+              nextcolorIndex = (i + 1) % dd.options.length;
+              break;
+            }
+          }
+          
+          rtmouseBtnColor = dd.options[nextcolorIndex].value;
+          updateColorPreviews();
       }//func
 
         // Function to update color picker visibility based on current mode
@@ -483,6 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedColor = color;
                     sync24BitPickerColor();
                     updatePaletteIconColor();
+                    updateColorPreviews();
                 });
                 grid.appendChild(colorDiv);
             });
@@ -493,6 +520,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Binding of event listeners ---
     document.getElementById("sizeDropdown").addEventListener("change", handleSizeChange);
     document.getElementById("pixelSizeInput").addEventListener("input", drawPixels);
+    
+    // Initialize pixel size input max based on initial canvas size
+    updatePixelSizeInputMax();
     document.getElementById("paintBucketButton").addEventListener("click", handlePaintBucket);
     document.getElementById("RMBpaintBucketButton").addEventListener("click", RMBhandlePaintBucket);
     
@@ -503,6 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
     customColorPicker.addEventListener('change', function() {
         selectedColor = customColorPicker.value;
         updatePaletteIconColor();
+        updateColorPreviews();
     });
 
     // Event listeners for 24-bit color picker
@@ -511,6 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById("hexColorInput").value = this.value.toUpperCase();
         addToRecentColors(selectedColor);
         updatePaletteIconColor();
+        updateColorPreviews();
     });
 
     document.getElementById("hexColorInput").addEventListener('input', function() {
@@ -520,6 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById("htmlColorPicker").value = selectedColor;
             addToRecentColors(selectedColor);
             updatePaletteIconColor();
+            updateColorPreviews();
         }
     });
 
@@ -532,6 +565,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("zoomOutButton").addEventListener("click", zoomOut);
     document.getElementById("fitToScreenButton").addEventListener("click", fitToScreen);
     document.getElementById("autoScaleToggle").addEventListener("change", toggleAutoScale);
+
+    // Unified color selector event listeners
+    document.getElementById("foregroundColorPreview").addEventListener("click", selectForegroundColor);
+    document.getElementById("backgroundColorPreview").addEventListener("click", selectBackgroundColor);
+    document.getElementById("swapColorsButton").addEventListener("click", swapColors);
 
     // Function to open file input
     window.openFileInput = function() {
@@ -837,6 +875,7 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
     handleModeChange();
     updateColorPickerVisibility(); // Initialize color picker visibility
     updateAutoScaleStatus(); // Initialize auto-scale status indicator
+    updateColorPreviews(); // Initialize unified color selector
     
     // Apply initial responsive scaling
     applyResponsiveScaling();
@@ -1089,8 +1128,11 @@ function calculateOptimalPixelSize(pixelWidth, pixelHeight, forceCalculation = f
     const maxPixelWidth = Math.floor(availableWidth / pixelWidth);
     const maxPixelHeight = Math.floor(availableHeight / pixelHeight);
     
-    // Use the smaller dimension to ensure it fits, constrained by min/max values
-    const optimalSize = Math.max(1, Math.min(maxPixelWidth, maxPixelHeight, 20));
+    // Get dynamic max pixel size based on canvas dimensions
+    const dynamicMax = getDynamicMaxPixelSize(pixelWidth, pixelHeight);
+    
+    // Use the smaller dimension to ensure it fits, constrained by min and dynamic max
+    const optimalSize = Math.max(1, Math.min(maxPixelWidth, maxPixelHeight, dynamicMax));
     
     console.log(`Screen: ${breakpoint.name}, Array: ${pixelWidth}x${pixelHeight}, Optimal size: ${optimalSize}px`);
     return optimalSize;
@@ -1158,7 +1200,14 @@ function fitToScreen() {
 function zoomIn() {
     const pixelSizeInput = document.getElementById("pixelSizeInput");
     const currentSize = parseInt(pixelSizeInput.value);
-    const newSize = Math.min(currentSize + 1, 20);
+    
+    // Get current canvas dimensions for dynamic max calculation
+    const sizeDropdown = document.getElementById("sizeDropdown");
+    const selectedSize = sizeDropdown.value;
+    const [height, width] = selectedSize.split("x").map(Number);
+    const dynamicMax = getDynamicMaxPixelSize(width, height);
+    
+    const newSize = Math.min(currentSize + 1, dynamicMax);
     
     if (newSize !== currentSize) {
         autoScaling = false;
@@ -1203,6 +1252,66 @@ function updateAutoScaleStatus() {
         statusElement.textContent = "OFF";
         statusElement.className = "scale-status off";
     }
+}
+
+// --- Unified Color Selector Functions --- //
+function updateColorPreviews() {
+    const foregroundPreview = document.getElementById("foregroundColorPreview");
+    const backgroundPreview = document.getElementById("backgroundColorPreview");
+    
+    if (foregroundPreview && backgroundPreview) {
+        foregroundPreview.style.backgroundColor = selectedColor;
+        backgroundPreview.style.backgroundColor = rtmouseBtnColor;
+    }
+}
+
+function selectForegroundColor() {
+    if (colorFormat === '24bit') {
+        document.getElementById("htmlColorPicker").click();
+    } else {
+        openColorPicker();
+    }
+}
+
+function selectBackgroundColor() {
+    if (colorFormat === '24bit') {
+        // For 24-bit mode, create temporary color picker for background
+        const tempColorPicker = document.createElement('input');
+        tempColorPicker.type = 'color';
+        tempColorPicker.value = rtmouseBtnColor;
+        tempColorPicker.style.display = 'none';
+        document.body.appendChild(tempColorPicker);
+        
+        tempColorPicker.addEventListener('change', function() {
+            rtmouseBtnColor = this.value;
+            updateColorPreviews();
+            document.body.removeChild(tempColorPicker);
+        });
+        
+        tempColorPicker.click();
+    } else {
+        // For 3-bit mode, cycle through colors for background
+        changermbColor();
+    }
+}
+
+function swapColors() {
+    const temp = selectedColor;
+    selectedColor = rtmouseBtnColor;
+    rtmouseBtnColor = temp;
+    
+    // Update the color picker values
+    if (colorFormat === '24bit') {
+        document.getElementById("htmlColorPicker").value = selectedColor;
+        document.getElementById("hexColorInput").value = selectedColor.toUpperCase();
+    } else {
+        // Update the 3-bit color picker
+        const customColorPicker = document.getElementById("customColorPicker");
+        customColorPicker.value = selectedColor;
+    }
+    
+    updateColorPreviews();
+    updatePaletteIconColor();
 }
 
     // Function to update text display below canvas with RGB data representation
@@ -1481,7 +1590,7 @@ function debug_init(){
   document.getElementById("sizeDropdown").value="16x32";
   document.getElementById("pixelSizeInput").value="15";
   document.getElementById("customColorPicker").value="#000000"
-  document.getElementById("paletteIcon").style.color="#000000"
+  // Removed paletteIcon reference - using unified color selector now
   var myevent = new Event('change');
   document.getElementById("customColorPicker").dispatchEvent(myevent)
   document.getElementById("paintBucketButton").click();

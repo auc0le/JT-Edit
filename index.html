@@ -6,7 +6,7 @@
         <title>JT Editor</title>
         <script src="app.js"></script>
         <!-- CDN content replaced with server-side assets -->
-        <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">  --> 
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"> 
         <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>        --> 
         <script src="saveas.js"></script>
         <script src="FileSaver.js"></script>
@@ -17,94 +17,153 @@
 
         <h2>JT Edit - For CoolLED1248</h2>
 
-        <div class="icon-group">
-
-          <label for="sizeDropdown">LED Size:</label>
-            <select id="sizeDropdown">
-                <option value="16x32">16x32</option>
-                <option value="16x64">16x64</option>
-                <option value="16x96" selected>16x96</option>
-                <option value="16x128">16x128</option>
-                <option value="16x192">16x192</option>                
-                <option value="24x48">24x48</option>
-                <option value="24x64">24x64</option>
-                <option value="32x128">32x128</option>
-                <option value="32x160">32x160</option>
-                <option value="32x192">32x192</option>
-            </select>        
-
-            <label for="modeDropdown">Mode:</label>
-            <select id="modeDropdown">
-                <option value="static" selected>Static</option>
-                <option value="animation">Animation</option>
-            </select>
-
-            <label for="pixelSizeInput">Pixel Size:</label>
-            <input type="number" id="pixelSizeInput" min="1" value="8" max="20">
+        <!-- Compact 2-Row Toolbar Interface -->
+        <div class="toolbar-container">
             
-            <button id="zoomOutButton" title="Zoom Out (Manual)">-</button>
-            <button id="fitToScreenButton" title="Fit to Screen (One-time optimization)">⌘</button>
-            <button id="zoomInButton" title="Zoom In (Manual)">+</button>
-            <label id="autoScaleLabel">
-                <input type="checkbox" id="autoScaleToggle" checked> Auto Scale
-                <span id="autoScaleStatus" class="scale-status">ON</span>
-            </label>
+            <!-- Row 1: File, Canvas & Format Controls -->
+            <div class="toolbar-row primary-row">
+                <div class="tool-group file-group">
+                    <label class="group-label">File</label>
+                    <div class="inline-controls">
+                        <div class="file-tools">
+                            <button onclick="openFileInput()" class="icon-btn-sm file-btn" title="Open File">
+                                <i class="fas fa-folder-open"></i>
+                            </button>
+                            <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt" style="display: none;">
+                            <button onclick="saveToFile()" class="icon-btn-sm file-btn" title="Save File">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                        <div class="control-pair">
+                            <label for="formatDropdown">Format</label>
+                            <select id="formatDropdown" class="control-input compact">
+                                <option value="v1">v1</option>
+                                <option value="v2">v2</option>
+                                <option value="png">PNG</option>
+                            </select>
+                        </div>
+                        <button id="debugToggle" class="icon-btn-sm debug-btn" title="Show/Hide RGB Array">
+                            <i class="fas fa-bug"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <!--  CDN content replaced with server-side assets -->
-            <!--<button id="paintBucketButton" title="Paint Bucket"><i class="fas fa-fill-drip"></i></button>
-            <i id="paletteIcon" class="fas fa-palette" ></i> -->
+                <div class="tool-group canvas-group">
+                    <label class="group-label">Canvas</label>
+                    <div class="inline-controls">
+                        <div class="control-pair">
+                            <label for="sizeDropdown">Size</label>
+                            <select id="sizeDropdown" class="control-input">
+                                <option value="16x32">16×32</option>
+                                <option value="16x64">16×64</option>
+                                <option value="16x96" selected>16×96</option>
+                                <option value="16x128">16×128</option>
+                                <option value="16x192">16×192</option>                
+                                <option value="24x48">24×48</option>
+                                <option value="24x64">24×64</option>
+                                <option value="32x128">32×128</option>
+                                <option value="32x160">32×160</option>
+                                <option value="32x192">32×192</option>
+                            </select>
+                        </div>
+                        <div class="control-pair">
+                            <label for="modeDropdown">Mode</label>
+                            <select id="modeDropdown" class="control-input">
+                                <option value="static" selected>Static</option>
+                                <option value="animation">Animation</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-            <a id="paintBucketButton" title="Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>
-            <a id="paletteIcon" title="LMB Color"><img class="icons" src="icons/paletteBlack.png"></img></a>
-            
-            <!-- 3-bit color picker (8 colors) -->
-            <select id="customColorPicker" style="display: block;">
-                <option value="#000000">Black</option>
-                <option value="#FFFFFF">White</option>
-                <option value="#FF0000">Red</option>
-                <option value="#00FF00">Green</option>
-                <option value="#0000FF">Blue</option>
-                <option value="#FFFF00">Yellow</option>
-                <option value="#FF00FF">Magenta</option>
-                <option value="#00FFFF">Cyan</option>
-            </select>
-
-            <!-- 24-bit color picker -->
-            <div id="colorPicker24bit" style="display: none;">
-                <input type="color" id="htmlColorPicker" value="#FF0000" title="Select Color">
-                <input type="text" id="hexColorInput" value="#FF0000" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" title="Hex Color Code">
-                <div id="recentColorsGrid" title="Recently Used Colors"></div>
+                <div class="tool-group color-format-group">
+                    <label class="group-label">Format</label>
+                    <div class="control-pair">
+                        <select id="colorFormatDropdown" class="control-input">
+                            <option value="3bit">3-bit (8 colors)</option>
+                            <option value="24bit">24-bit RGB</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-           <a id="rtclickIcon" title="RMB Color"><img class="icons" src="icons/rtBlack.png"></img></a>
-            <a id="RMBpaintBucketButton" title="RMB Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>
+            <!-- Row 2: View, Colors & Paint Tools -->
+            <div class="toolbar-row color-row">
+                <div class="tool-group view-group">
+                    <label class="group-label">View</label>
+                    <div class="inline-controls">
+                        <div class="control-pair">
+                            <label for="pixelSizeInput">Pixel Size</label>
+                            <input type="number" id="pixelSizeInput" class="control-input compact" min="1" value="8" max="50">
+                        </div>
+                        <div class="zoom-controls">
+                            <button id="zoomOutButton" class="icon-btn-sm" title="Zoom Out"><i class="fas fa-minus"></i></button>
+                            <button id="fitToScreenButton" class="icon-btn-sm fit" title="Fit to Screen"><i class="fas fa-expand-arrows-alt"></i></button>
+                            <button id="zoomInButton" class="icon-btn-sm" title="Zoom In"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="control-pair">
+                            <label id="autoScaleLabel" class="checkbox-label">
+                                <input type="checkbox" id="autoScaleToggle" checked> Auto
+                                <span id="autoScaleStatus" class="scale-status">ON</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-group unified-color-group">
+                    <label class="group-label">Colors</label>
+                    <div class="unified-color-selector compact">
+                        <!-- Color Preview Stack -->
+                        <div class="color-preview-container">
+                            <div class="color-stack compact">
+                                <div class="foreground-color" id="foregroundColorPreview" title="Foreground (Left Click)"></div>
+                                <div class="background-color" id="backgroundColorPreview" title="Background (Right Click)"></div>
+                            </div>
+                            <button class="icon-btn-sm swap-btn" id="swapColorsButton" title="Swap Foreground/Background"><i class="fas fa-exchange-alt"></i></button>
+                        </div>
+                        
+                        <!-- Color Picker Controls -->
+                        <div class="color-picker-controls">
+                            <!-- 3-bit color picker -->
+                            <select id="customColorPicker" class="control-input compact" style="display: block;">
+                                <option value="#000000">Black</option>
+                                <option value="#FFFFFF">White</option>
+                                <option value="#FF0000">Red</option>
+                                <option value="#00FF00">Green</option>
+                                <option value="#0000FF">Blue</option>
+                                <option value="#FFFF00">Yellow</option>
+                                <option value="#FF00FF">Magenta</option>
+                                <option value="#00FFFF">Cyan</option>
+                            </select>
+
+                            <!-- 24-bit color picker -->
+                            <div id="colorPicker24bit" style="display: none;">
+                                <div style="position: relative; display: inline-block;">
+                                    <input type="color" id="htmlColorPicker" value="#FF0000" title="Select Color" style="opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer;">
+                                    <button class="icon-btn-sm" type="button" style="pointer-events: none;" title="Select Color">
+                                        <i class="fas fa-eye-dropper"></i>
+                                    </button>
+                                </div>
+                                <input type="text" id="hexColorInput" value="#FF0000" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" title="Hex Color Code">
+                                <div id="recentColorsGrid" title="Recently Used Colors"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-group paint-group">
+                    <label class="group-label">Paint</label>
+                    <div class="paint-tools">
+                        <button id="paintBucketButton" class="icon-btn-sm paint-btn" title="Fill with Foreground Color">
+                            <i class="fas fa-paint-roller"></i>
+                        </button>
+                        <button id="RMBpaintBucketButton" class="icon-btn-sm paint-btn" title="Fill with Background Color">
+                            <i class="fas fa-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
             
-            <!--  CDN content replaced with server-side assets -->
-            <!--<i class="fas fa-folder" onclick="openFileInput()"></i>    
-            <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt">
-            <i class="fas fa-save" onclick="saveToFile()"></i>-->
-
-            <a onclick="openFileInput()" title="Open File"><img class="icons" src="icons/folder.png"></img></a>
-            <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt">
-            <a onclick="saveToFile()" title="Save File"><img class="icons" src="icons/save.png"></img></a>
-
-            <label for="colorFormatDropdown">Color Format:</label>
-            <select id="colorFormatDropdown">
-                <option value="3bit">3-bit Indexed (8 colors)</option>
-                <option value="24bit">24-bit RGB (Full color)</option>
-            </select>
-
-            <label for="formatDropdown">Export Format:</label>
-            <select id="formatDropdown">
-                <option value="v1">v1</option>
-                <option value="v2">v2</option>
-                <option value="png">png</option>
-            </select>
-
-            <!--  CDN content replaced with server-side assets -->
-            <!--<i id="debugToggle" class="fa-solid fa-bug"></i>-->
-
-            <a id="debugToggle" title="Show/Hide RGB Array"><img class="icons" src="icons/bug.png"></a>
         </div>
 
         <div id="pixelCanvasContainer">
