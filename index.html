@@ -49,7 +49,8 @@
             <a id="paintBucketButton" title="Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>
             <a id="paletteIcon" title="LMB Color"><img class="icons" src="icons/paletteBlack.png"></img></a>
             
-            <select id="customColorPicker">
+            <!-- 3-bit color picker (8 colors) -->
+            <select id="customColorPicker" style="display: block;">
                 <option value="#000000">Black</option>
                 <option value="#FFFFFF">White</option>
                 <option value="#FF0000">Red</option>
@@ -59,6 +60,13 @@
                 <option value="#FF00FF">Magenta</option>
                 <option value="#00FFFF">Cyan</option>
             </select>
+
+            <!-- 24-bit color picker -->
+            <div id="colorPicker24bit" style="display: none;">
+                <input type="color" id="htmlColorPicker" value="#FF0000" title="Select Color">
+                <input type="text" id="hexColorInput" value="#FF0000" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" title="Hex Color Code">
+                <div id="recentColorsGrid" title="Recently Used Colors"></div>
+            </div>
 
            <a id="rtclickIcon" title="RMB Color"><img class="icons" src="icons/rtBlack.png"></img></a>
             <a id="RMBpaintBucketButton" title="RMB Paint Bucket"><img class="icons" src="icons/paint-bucket.png"></img></a>

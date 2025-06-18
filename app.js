@@ -38,6 +38,7 @@ let aniType         = 1;
 let delays          = 250;
 let dataType        = 1; // default to static
 let colorFormat     = '3bit'; // '3bit' or '24bit'
+let recentColors    = []; // Array to store recently used colors in 24-bit mode
 
 // Function to convert RGB to hex
 function rgbToHex(r, g, b) {
@@ -105,7 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("sizeDropdown").value=selectedSize;
     document.getElementById("formatDropdown").value=selectedFormat;
     document.getElementById("modeDropdown").value=currentMode;
-
+    
+    // Initialize color picker visibility (will be called after functions are defined)
 
     let isPlaying = false; // Variable to track animation state
 
@@ -216,6 +218,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 graffitiType = 1;
                 aniType = 1;
             }
+            
+            // Update color picker visibility
+            updateColorPickerVisibility();
             
             // Convert existing pixel data if format changed
             if (oldFormat !== colorFormat && pixelArrayFrames && pixelArrayFrames.length > 0) {
@@ -377,15 +382,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Advances to next color on paletteIcon click
         function openColorPicker() {        
-          var el = document.getElementById("customColorPicker")
-          var myevent = new Event('change');
+          if (colorFormat === '24bit') {
+              // For 24-bit mode, trigger the HTML5 color picker
+              document.getElementById("htmlColorPicker").click();
+          } else {
+              // For 3-bit mode, cycle through colors in dropdown
+              var el = document.getElementById("customColorPicker")
+              var myevent = new Event('change');
 
-          if (el.selectedIndex + 1 < el.length){  //cycle through colors in dropdown
-            el.selectedIndex++;
-          }else{
-            el.selectedIndex = 0;
+              if (el.selectedIndex + 1 < el.length){  //cycle through colors in dropdown
+                el.selectedIndex++;
+              }else{
+                el.selectedIndex = 0;
+              }
+              el.dispatchEvent(myevent)
           }
-        el.dispatchEvent(myevent)
         }
 
         // Advances to next color on rtclickIcon click
@@ -409,6 +420,61 @@ document.addEventListener('DOMContentLoaded', function() {
           rtmouseBtnColor = colorNameToHex(nextcolor);        
       }//func
 
+        // Function to update color picker visibility based on current mode
+        function updateColorPickerVisibility() {
+            const picker3bit = document.getElementById("customColorPicker");
+            const picker24bit = document.getElementById("colorPicker24bit");
+            
+            if (colorFormat === '24bit') {
+                picker3bit.style.display = 'none';
+                picker24bit.style.display = 'flex';
+                // Sync the current color to the 24-bit picker
+                sync24BitPickerColor();
+            } else {
+                picker3bit.style.display = 'block';
+                picker24bit.style.display = 'none';
+            }
+        }
+
+        // Function to sync 24-bit picker with current selected color
+        function sync24BitPickerColor() {
+            const htmlColorPicker = document.getElementById("htmlColorPicker");
+            const hexColorInput = document.getElementById("hexColorInput");
+            
+            htmlColorPicker.value = selectedColor;
+            hexColorInput.value = selectedColor.toUpperCase();
+        }
+
+        // Function to add color to recent colors
+        function addToRecentColors(color) {
+            if (!recentColors.includes(color)) {
+                recentColors.unshift(color);
+                if (recentColors.length > 5) {
+                    recentColors.pop();
+                }
+                updateRecentColorsGrid();
+            }
+        }
+
+        // Function to update recent colors grid
+        function updateRecentColorsGrid() {
+            const grid = document.getElementById("recentColorsGrid");
+            grid.innerHTML = '';
+            
+            recentColors.forEach(color => {
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'recent-color';
+                colorDiv.style.backgroundColor = color;
+                colorDiv.title = color;
+                colorDiv.addEventListener('click', () => {
+                    selectedColor = color;
+                    sync24BitPickerColor();
+                    updatePaletteIconColor();
+                });
+                grid.appendChild(colorDiv);
+            });
+        }
+
     // --- End Event Listeners for GUI ---
 
     // --- Binding of event listeners ---
@@ -424,6 +490,24 @@ document.addEventListener('DOMContentLoaded', function() {
     customColorPicker.addEventListener('change', function() {
         selectedColor = customColorPicker.value;
         updatePaletteIconColor();
+    });
+
+    // Event listeners for 24-bit color picker
+    document.getElementById("htmlColorPicker").addEventListener('input', function() {
+        selectedColor = this.value;
+        document.getElementById("hexColorInput").value = this.value.toUpperCase();
+        addToRecentColors(selectedColor);
+        updatePaletteIconColor();
+    });
+
+    document.getElementById("hexColorInput").addEventListener('input', function() {
+        const hexValue = this.value;
+        if (hexValue.match(/^#[0-9A-Fa-f]{6}$/)) {
+            selectedColor = hexValue.toUpperCase();
+            document.getElementById("htmlColorPicker").value = selectedColor;
+            addToRecentColors(selectedColor);
+            updatePaletteIconColor();
+        }
     });
 
     document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
@@ -716,6 +800,7 @@ function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalF
     updatePaletteIconColor();
     handleModeChange();
     drawPixels();
+    updateColorPickerVisibility(); // Initialize color picker visibility
     if (debug_GBL){debug_init();}  //init some parameters for debug
 });
 //////////////////end of DOMContentLoaded///////////////////////////////////////////////////////////////////////////////

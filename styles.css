@@ -161,3 +161,47 @@ min-width: 3ch;
   height: 186px; position: absolute; top: 0; left: 0; bottom: 0; right: 0; margin: auto;
   */
 }
+
+/* 24-bit color picker styles */
+#colorPicker24bit {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#htmlColorPicker {
+    width: 40px;
+    height: 30px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+#hexColorInput {
+    width: 70px;
+    font-family: monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    border: 1px solid #ccc;
+    padding: 3px;
+    border-radius: 3px;
+}
+
+#recentColorsGrid {
+    display: flex;
+    gap: 2px;
+    margin-left: 5px;
+}
+
+.recent-color {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.recent-color:hover {
+    border: 2px solid #333;
+}
