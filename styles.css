@@ -251,7 +251,7 @@ body {
     padding: max(12px, calc(12px * var(--scale-factor)));
     background: #f8f9fa;
     border-radius: 3px;
-    margin: 2px auto;
+    margin: 2px auto 15px auto;
     width: fit-content;
     max-width: 100%;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
