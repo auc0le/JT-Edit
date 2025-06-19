@@ -4,6 +4,8 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>JT Editor</title>
+        <script src="components.js"></script>
+        <script src="keyboard-shortcuts.js"></script>
         <script src="app.js"></script>
         <!-- CDN content replaced with server-side assets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"> 
@@ -26,23 +28,23 @@
                     <label class="group-label">File</label>
                     <div class="inline-controls">
                         <div class="file-tools">
-                            <button onclick="openFileInput()" class="icon-btn-sm file-btn" title="Open File">
+                            <button onclick="openFileInput()" class="icon-btn-sm file-btn tooltip" title="Open File (Ctrl+O)" data-tooltip="Open JT files or import PNG images">
                                 <i class="fas fa-folder-open"></i>
                             </button>
                             <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt" style="display: none;">
-                            <button onclick="saveToFile()" class="icon-btn-sm file-btn" title="Save File">
+                            <button onclick="saveToFile()" class="icon-btn-sm file-btn tooltip" title="Save File (Ctrl+S)" data-tooltip="Save as JT file or export as PNG">
                                 <i class="fas fa-save"></i>
                             </button>
                         </div>
                         <div class="control-pair">
                             <label for="formatDropdown">Format</label>
-                            <select id="formatDropdown" class="control-input compact">
+                            <select id="formatDropdown" class="control-input compact tooltip" title="File Format" data-tooltip="Select file format for saving (v1/v2 for LED panels, PNG for images)">
                                 <option value="v1">v1</option>
                                 <option value="v2">v2</option>
                                 <option value="png">PNG</option>
                             </select>
                         </div>
-                        <button id="debugToggle" class="icon-btn-sm debug-btn" title="Show/Hide RGB Array">
+                        <button id="debugToggle" class="icon-btn-sm debug-btn tooltip" title="Show/Hide RGB Array" data-tooltip="Toggle display of RGB array data for debugging">
                             <i class="fas fa-bug"></i>
                         </button>
                     </div>
@@ -53,7 +55,7 @@
                     <div class="inline-controls">
                         <div class="control-pair">
                             <label for="sizeDropdown">Size</label>
-                            <select id="sizeDropdown" class="control-input">
+                            <select id="sizeDropdown" class="control-input tooltip" title="Canvas Size" data-tooltip="Select LED panel dimensions for your project">
                                 <option value="16x32">16×32</option>
                                 <option value="16x64">16×64</option>
                                 <option value="16x96" selected>16×96</option>
@@ -68,7 +70,7 @@
                         </div>
                         <div class="control-pair">
                             <label for="modeDropdown">Mode</label>
-                            <select id="modeDropdown" class="control-input">
+                            <select id="modeDropdown" class="control-input tooltip" title="Mode Selection" data-tooltip="Switch between static image and animation modes">
                                 <option value="static" selected>Static</option>
                                 <option value="animation">Animation</option>
                             </select>
@@ -79,7 +81,7 @@
                 <div class="tool-group color-format-group">
                     <label class="group-label">Format</label>
                     <div class="control-pair">
-                        <select id="colorFormatDropdown" class="control-input">
+                        <select id="colorFormatDropdown" class="control-input tooltip" title="Color Format" data-tooltip="Choose between 3-bit (8 colors) or 24-bit (16M colors) mode">
                             <option value="3bit">3-bit (8 colors)</option>
                             <option value="24bit">24-bit RGB</option>
                         </select>
@@ -94,18 +96,19 @@
                     <div class="inline-controls">
                         <div class="control-pair">
                             <label for="pixelSizeInput">Pixel Size</label>
-                            <input type="number" id="pixelSizeInput" class="control-input compact" min="1" value="8" max="50">
+                            <input type="number" id="pixelSizeInput" class="control-input compact tooltip" min="1" value="8" max="50" title="Pixel Size" data-tooltip="Adjust the display size of pixels (larger = more zoom)">
                         </div>
                         <div class="zoom-controls">
-                            <button id="zoomOutButton" class="icon-btn-sm" title="Zoom Out"><i class="fas fa-minus"></i></button>
-                            <button id="fitToScreenButton" class="icon-btn-sm fit" title="Fit to Screen"><i class="fas fa-expand-arrows-alt"></i></button>
-                            <button id="zoomInButton" class="icon-btn-sm" title="Zoom In"><i class="fas fa-plus"></i></button>
+                            <button id="zoomOutButton" class="icon-btn-sm tooltip" title="Zoom Out (-)" data-tooltip="Decrease pixel size manually"><i class="fas fa-minus"></i></button>
+                            <button id="fitToScreenButton" class="icon-btn-sm fit tooltip" title="Fit to Screen (F)" data-tooltip="Automatically adjusts pixel size to fit canvas on screen"><i class="fas fa-expand-arrows-alt"></i></button>
+                            <button id="zoomInButton" class="icon-btn-sm tooltip" title="Zoom In (+)" data-tooltip="Increase pixel size manually"><i class="fas fa-plus"></i></button>
                         </div>
                         <div class="control-pair">
-                            <label id="autoScaleLabel" class="checkbox-label">
-                                <input type="checkbox" id="autoScaleToggle" checked> Auto
-                                <span id="autoScaleStatus" class="scale-status">ON</span>
+                            <label id="autoScaleLabel" class="checkbox-label tooltip" data-tooltip="Automatically adjusts pixel size to fit your screen for optimal viewing">
+                                <input type="checkbox" id="autoScaleToggle" checked aria-describedby="autoScaleDescription"> Auto
+                                <span id="autoScaleStatus" class="scale-status tooltip" data-tooltip="Auto scaling is currently enabled - pixel size adjusts automatically">ON</span>
                             </label>
+                            <div id="autoScaleDescription" class="sr-only">When enabled, automatically adjusts pixel size based on canvas dimensions and screen size for optimal viewing experience</div>
                         </div>
                     </div>
                 </div>
@@ -116,16 +119,16 @@
                         <!-- Color Preview Stack -->
                         <div class="color-preview-container">
                             <div class="color-stack compact">
-                                <div class="foreground-color" id="foregroundColorPreview" title="Foreground (Left Click)"></div>
-                                <div class="background-color" id="backgroundColorPreview" title="Background (Right Click)"></div>
+                                <div class="foreground-color tooltip" id="foregroundColorPreview" title="Foreground (Left Click)" data-tooltip="Click to select foreground color (used for left-click drawing)"></div>
+                                <div class="background-color tooltip" id="backgroundColorPreview" title="Background (Right Click)" data-tooltip="Click to select background color (used for right-click drawing)"></div>
                             </div>
-                            <button class="icon-btn-sm swap-btn" id="swapColorsButton" title="Swap Foreground/Background"><i class="fas fa-exchange-alt"></i></button>
+                            <button class="btn btn--icon swap-btn tooltip" id="swapColorsButton" title="Swap Foreground/Background (X)" data-tooltip="Swap the foreground and background colors"><i class="fas fa-exchange-alt"></i></button>
                         </div>
                         
                         <!-- Color Picker Controls -->
                         <div class="color-picker-controls">
                             <!-- 3-bit color picker -->
-                            <select id="customColorPicker" class="control-input compact" style="display: block;">
+                            <select id="customColorPicker" class="control-input compact tooltip" style="display: block;" title="3-bit Color Picker" data-tooltip="Select from 8 predefined colors in 3-bit mode">
                                 <option value="#000000">Black</option>
                                 <option value="#FFFFFF">White</option>
                                 <option value="#FF0000">Red</option>
@@ -139,12 +142,11 @@
                             <!-- 24-bit color picker -->
                             <div id="colorPicker24bit" style="display: none;">
                                 <div style="position: relative; display: inline-block;">
-                                    <input type="color" id="htmlColorPicker" value="#FF0000" title="Select Color" style="opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer;">
-                                    <button class="icon-btn-sm" type="button" style="pointer-events: none;" title="Select Color">
+                                    <input type="color" id="htmlColorPicker" value="#FF0000" title="24-bit Color Picker" style="opacity: 0; position: absolute; width: 100%; height: 100%; cursor: crosshair;">
+                                    <button class="btn btn--icon" type="button" style="pointer-events: none;" title="Select Color">
                                         <i class="fas fa-eye-dropper"></i>
                                     </button>
                                 </div>
-                                <input type="text" id="hexColorInput" value="#FF0000" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" title="Hex Color Code">
                                 <div id="recentColorsGrid" title="Recently Used Colors"></div>
                             </div>
                         </div>
@@ -154,11 +156,14 @@
                 <div class="tool-group paint-group">
                     <label class="group-label">Paint</label>
                     <div class="paint-tools">
-                        <button id="paintBucketButton" class="icon-btn-sm paint-btn" title="Fill with Foreground Color">
+                        <button id="paintBucketButton" class="icon-btn-sm paint-btn tooltip" title="Fill with Foreground Color (Shift+F)" data-tooltip="Fill entire canvas with the selected foreground color">
                             <i class="fas fa-paint-roller"></i>
                         </button>
-                        <button id="RMBpaintBucketButton" class="icon-btn-sm paint-btn" title="Fill with Background Color">
+                        <button id="RMBpaintBucketButton" class="icon-btn-sm paint-btn tooltip" title="Fill with Background Color (Shift+B)" data-tooltip="Fill entire canvas with the selected background color">
                             <i class="fas fa-fill"></i>
+                        </button>
+                        <button id="helpButton" class="icon-btn-sm help-btn tooltip" title="Help & Shortcuts (F1)" data-tooltip="Show keyboard shortcuts and help information">
+                            <i class="fas fa-question"></i>
                         </button>
                     </div>
                 </div>
@@ -189,35 +194,257 @@
         </div>-->
             
 
-        <div id="controlButtons">
-          <div style="text-align:center;"><span id="frameDisplay">Frame: <span id="currentFrame">01</span>/<span id="totalFrames">01</span></span>
-           <span id="delaytxt">Delay:</span><input id="delay_id" type="number" min="50" value="250" max="1000" step="50">
-          </div>
-          <div style = "padding-bottom:10px;"></div>
-            <button id="backButton" title="Back">|&#9664;</button>       
-            <button id="playPauseButton" title="Play/Pause">&#9654;||</button> 
-            <button id="forwardButton" title="Forward">&#9654;|</button>   
-            <button id="plusButton" title="Add Frame">+</button>  
-            <button id="minusButton" title="Delete Frame">-</button>  
-            <button id="swapButton" title="Swap Frames">&#8633;</button>  
-            <button id="cloneFrameButton" title="Clone Frame"><img style="width:22px;height:22px;" src="icons/clone.png"></img></button>  
-
+        <!-- Animation Toolbar -->
+        <div id="controlButtons" class="toolbar toolbar--success hidden" role="toolbar" aria-label="Animation Controls">
+            <div class="tool-group">
+                <span class="tool-group__label">Frame</span>
+                <div class="control-group">
+                    <span id="frameDisplay" class="frame-display" role="status" aria-live="polite">
+                        Frame: <span id="currentFrame">01</span>/<span id="totalFrames">01</span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <span class="tool-group__label">Playback</span>
+                <div class="btn-group" role="group" aria-label="Playback controls">
+                    <button id="backButton" class="btn btn--icon-sm" title="Previous Frame (←)" data-tooltip="Previous Frame" aria-label="Previous Frame">
+                        <i class="fas fa-step-backward" aria-hidden="true"></i>
+                    </button>
+                    <button id="playPauseButton" class="btn btn--icon-sm btn--primary" title="Play/Pause (Space)" data-tooltip="Play/Pause" aria-label="Play/Pause">
+                        <i class="fas fa-play" aria-hidden="true"></i>
+                    </button>
+                    <button id="forwardButton" class="btn btn--icon-sm" title="Next Frame (→)" data-tooltip="Next Frame" aria-label="Next Frame">
+                        <i class="fas fa-step-forward" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <span class="tool-group__label">Frame Mgmt</span>
+                <div class="btn-group" role="group" aria-label="Frame management">
+                    <button id="plusButton" class="btn btn--icon-sm" title="Add Frame (Ctrl+N)" data-tooltip="Add Frame" aria-label="Add Frame">
+                        <i class="fas fa-file" aria-hidden="true"></i>
+                    </button>
+                    <button id="cloneFrameButton" class="btn btn--icon-sm" title="Clone Frame (Ctrl+D)" data-tooltip="Clone Frame" aria-label="Clone Frame">
+                        <i class="fas fa-clone" aria-hidden="true"></i>
+                    </button>
+                    <button id="swapButton" class="btn btn--icon-sm" title="Swap Frames" data-tooltip="Swap Frames" aria-label="Swap Frames">
+                        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                    </button>
+                    <button id="minusButton" class="btn btn--icon-sm btn--error" title="Delete Frame (Delete)" data-tooltip="Delete Frame" aria-label="Delete Frame">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <span class="tool-group__label">Timing</span>
+                <div class="control-pair">
+                    <label for="delay_id" class="control-pair__label">Delay (ms)</label>
+                    <input id="delay_id" class="input input--sm" type="number" min="50" value="250" max="1000" step="50" aria-label="Animation delay in milliseconds">
+                </div>
+            </div>
         </div>
 
-        <div id="directionButtons">
-            <button id="upButton" title="Shift Up">&#9650;</button>       
-            <button id="downButton" title="Shift Down"> &#9660;</button>  
-            <button id="leftButton" title="Shift Left"> &#9664;</button>  
-            <button id="rightButton" title="Shift Right"> &#9654;</button> 
+        <!-- Direction Toolbar -->
+        <div class="toolbar toolbar--info" id="directionButtons" role="toolbar" aria-label="Transform Controls">
+            <div class="tool-group">
+                <span class="tool-group__label">Transform</span>
+                <div class="direction-grid" role="group" aria-label="Direction controls">
+                    <button id="upButton" class="btn btn--icon direction-btn--up" title="Shift Up (↑)" data-tooltip="Shift Up" aria-label="Shift pixels up">
+                        <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    </button>
+                    <button id="leftButton" class="btn btn--icon direction-btn--left" title="Shift Left (←)" data-tooltip="Shift Left" aria-label="Shift pixels left">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    </button>
+                    <button id="rightButton" class="btn btn--icon direction-btn--right" title="Shift Right (→)" data-tooltip="Shift Right" aria-label="Shift pixels right">
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </button>
+                    <button id="downButton" class="btn btn--icon direction-btn--down" title="Shift Down (↓)" data-tooltip="Shift Down" aria-label="Shift pixels down">
+                        <i class="fas fa-arrow-down" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div id="arrayOutput">
             <pre id="textDisplay" style="display: none;"></pre>
         </div>
-<!--swap dialog -->
-<div id='swapdiagid' class='swapdiag'>
-<div class='swapdiag-content'>
-</div></div>
-<!--swap dialog -->
+
+        <!-- Help Modal -->
+        <div id="helpModal" class="modal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
+            <div class="modal__content">
+                <div class="modal__header">
+                    <h2 id="helpModalTitle" class="modal__title">JT-Edit - Keyboard Shortcuts & Help</h2>
+                    <button id="closeHelpModal" class="btn btn--icon-sm" aria-label="Close help modal">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="modal__body">
+                    <div class="mode-toggle">
+                        <label class="toggle-label">Show shortcuts for:</label>
+                        <div class="btn-group mode-toggle-group" role="group" aria-label="Shortcut mode selection">
+                            <button id="staticModeToggle" class="btn btn--sm mode-toggle-btn" type="button">Static Mode</button>
+                            <button id="animationModeToggle" class="btn btn--sm mode-toggle-btn" type="button">Animation Mode</button>
+                        </div>
+                    </div>
+                    <div class="help-sections">
+                        <div class="help-section">
+                            <h3>File Operations</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+O</span>
+                                    <span class="shortcut-desc">Open file (JT or PNG)</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+S</span>
+                                    <span class="shortcut-desc">Save file</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section animation-only">
+                            <h3>Animation Controls</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Space</span>
+                                    <span class="shortcut-desc">Play/Pause animation</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">←/→</span>
+                                    <span class="shortcut-desc">Previous/Next frame</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+N</span>
+                                    <span class="shortcut-desc">Add new frame</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+D</span>
+                                    <span class="shortcut-desc">Clone current frame</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Delete</span>
+                                    <span class="shortcut-desc">Delete current frame</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Escape</span>
+                                    <span class="shortcut-desc">Stop animation</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section static-only">
+                            <h3>Transform & Movement</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Shift+↑/↓/←/→</span>
+                                    <span class="shortcut-desc">Shift all pixels in direction</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Zoom & View Controls</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">+/=</span>
+                                    <span class="shortcut-desc">Zoom in</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">-</span>
+                                    <span class="shortcut-desc">Zoom out</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">F</span>
+                                    <span class="shortcut-desc">Fit to screen</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+Shift+A</span>
+                                    <span class="shortcut-desc">Toggle auto scaling</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Color & Paint Tools</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">X</span>
+                                    <span class="shortcut-desc">Swap foreground/background colors</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Shift+F</span>
+                                    <span class="shortcut-desc">Fill with foreground color</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Shift+B</span>
+                                    <span class="shortcut-desc">Fill with background color</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+Shift+C</span>
+                                    <span class="shortcut-desc">Toggle color format (3-bit/24-bit)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Mode & Canvas</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+M</span>
+                                    <span class="shortcut-desc">Toggle static/animation mode</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">1-5</span>
+                                    <span class="shortcut-desc">Quick canvas size selection</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Help & Interface</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">F1</span>
+                                    <span class="shortcut-desc">Show this help dialog</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">?</span>
+                                    <span class="shortcut-desc">Show this help dialog</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Drawing</h3>
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Left Click</span>
+                                    <span class="shortcut-desc">Paint with foreground color</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Right Click</span>
+                                    <span class="shortcut-desc">Paint with background color</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Click + Drag</span>
+                                    <span class="shortcut-desc">Paint continuously while dragging</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal__footer">
+                    <button id="closeHelpModalFooter" class="btn btn--primary">Got it!</button>
+                </div>
+            </div>
+        </div>
+
+        <!--swap dialog -->
+        <div id='swapdiagid' class='swapdiag'>
+        <div class='swapdiag-content'>
+        </div></div>
+        <!--swap dialog -->
     </body>
     </html>

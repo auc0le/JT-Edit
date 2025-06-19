@@ -168,8 +168,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 case "playPauseButton":
                     // Handle play/pause button click
                     isPlaying = !isPlaying;
+                    const playPauseIcon = document.querySelector("#playPauseButton i");
                     if (isPlaying) {
+                        playPauseIcon.classList.remove("fa-play");
+                        playPauseIcon.classList.add("fa-pause");
                         playAnimation();
+                    } else {
+                        playPauseIcon.classList.remove("fa-pause");
+                        playPauseIcon.classList.add("fa-play");
                     }
                     break;
                 case "forwardButton":
@@ -322,7 +328,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Toggle the visibility of the control buttons based on the mode
             const controlButtons = document.getElementById("controlButtons");
-            controlButtons.style.display = currentMode === "animation" ? "block" : "none";
+            if (currentMode === "animation") {
+                controlButtons.classList.remove("hidden");
+                controlButtons.style.display = "flex";
+            } else {
+                controlButtons.classList.add("hidden");
+                controlButtons.style.display = "none";
+            }
             dataType = currentMode === "animation" ? 0 : 1; // 0 = animation, 1 = static
         }
 
@@ -415,6 +427,58 @@ document.addEventListener('DOMContentLoaded', function() {
             debugToggleIcon.childNodes[0].src = isDebugVisible ? "icons/bugG.png" : "icons/bug.png"
         }
 
+        // Function to show help modal
+        function showHelpModal() {
+            const helpModal = document.getElementById("helpModal");
+            helpModal.classList.add("modal--open");
+            helpModal.setAttribute("aria-hidden", "false");
+            
+            // Set initial mode based on current application mode
+            const currentMode = document.getElementById("modeDropdown").value;
+            setHelpModalMode(currentMode);
+            
+            // Focus the close button for accessibility
+            setTimeout(() => {
+                document.getElementById("closeHelpModal").focus();
+            }, 100);
+        }
+
+        // Function to hide help modal
+        function hideHelpModal() {
+            const helpModal = document.getElementById("helpModal");
+            helpModal.classList.remove("modal--open");
+            helpModal.setAttribute("aria-hidden", "true");
+            
+            // Return focus to help button
+            document.getElementById("helpButton").focus();
+        }
+
+        // Function to set help modal mode (static vs animation)
+        function setHelpModalMode(mode) {
+            const staticSections = document.querySelectorAll('.static-only');
+            const animationSections = document.querySelectorAll('.animation-only');
+            const staticToggle = document.getElementById('staticModeToggle');
+            const animationToggle = document.getElementById('animationModeToggle');
+            
+            if (mode === 'static') {
+                // Show static sections, hide animation sections
+                staticSections.forEach(section => section.style.display = 'block');
+                animationSections.forEach(section => section.style.display = 'none');
+                
+                // Update toggle button states
+                staticToggle.classList.add('btn--primary');
+                animationToggle.classList.remove('btn--primary');
+            } else {
+                // Show animation sections, hide static sections
+                staticSections.forEach(section => section.style.display = 'none');
+                animationSections.forEach(section => section.style.display = 'block');
+                
+                // Update toggle button states
+                animationToggle.classList.add('btn--primary');
+                staticToggle.classList.remove('btn--primary');
+            }
+        }
+
 
         // Function to update palette icon color (legacy function - now updates color previews)
         function updatePaletteIconColor() {
@@ -478,10 +542,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Function to sync 24-bit picker with current selected color
         function sync24BitPickerColor() {
             const htmlColorPicker = document.getElementById("htmlColorPicker");
-            const hexColorInput = document.getElementById("hexColorInput");
             
-            htmlColorPicker.value = selectedColor;
-            hexColorInput.value = selectedColor.toUpperCase();
+            if (htmlColorPicker) {
+                htmlColorPicker.value = selectedColor;
+            }
         }
 
         // Function to add color to recent colors
@@ -539,26 +603,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners for 24-bit color picker
     document.getElementById("htmlColorPicker").addEventListener('input', function() {
         selectedColor = this.value;
-        document.getElementById("hexColorInput").value = this.value.toUpperCase();
-        addToRecentColors(selectedColor);
         updatePaletteIconColor();
         updateColorPreviews();
     });
-
-    document.getElementById("hexColorInput").addEventListener('input', function() {
-        const hexValue = this.value;
-        if (hexValue.match(/^#[0-9A-Fa-f]{6}$/)) {
-            selectedColor = hexValue.toUpperCase();
-            document.getElementById("htmlColorPicker").value = selectedColor;
-            addToRecentColors(selectedColor);
-            updatePaletteIconColor();
-            updateColorPreviews();
-        }
+    
+    // Add to recent colors only when color picker dialog is closed
+    document.getElementById("htmlColorPicker").addEventListener('change', function() {
+        addToRecentColors(selectedColor);
     });
+
 
     document.getElementById("formatDropdown").addEventListener("change", handleFormatChange);
     document.getElementById("colorFormatDropdown").addEventListener("change", handleColorFormatChange);
     document.getElementById("debugToggle").addEventListener("click", toggleDebugDisplay);
+    document.getElementById("helpButton").addEventListener("click", showHelpModal);
 
     // Zoom control event listeners
     document.getElementById("zoomInButton").addEventListener("click", zoomIn);
@@ -583,6 +641,37 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("minusButton").addEventListener("click", () => handleButtonClick("minusButton"));
     document.getElementById("swapButton").addEventListener("click", () => handleButtonClick("swapButton"));
 
+    // Help modal event listeners
+    document.getElementById("closeHelpModal").addEventListener("click", hideHelpModal);
+    document.getElementById("closeHelpModalFooter").addEventListener("click", hideHelpModal);
+    
+    // Help modal mode toggle event listeners
+    document.getElementById("staticModeToggle").addEventListener("click", function() {
+        setHelpModalMode('static');
+    });
+    
+    document.getElementById("animationModeToggle").addEventListener("click", function() {
+        setHelpModalMode('animation');
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById("helpModal").addEventListener("click", function(event) {
+        if (event.target === this) {
+            hideHelpModal();
+        }
+    });
+    
+    // Close modal with escape key
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            const helpModal = document.getElementById("helpModal");
+            if (helpModal.classList.contains("modal--open")) {
+                hideHelpModal();
+                event.preventDefault();
+            }
+        }
+    });
+
     // Window resize listener for responsive scaling
     let resizeTimeout;
     window.addEventListener('resize', function() {
@@ -599,14 +688,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to get the binary component for a specific color
     // function getBinaryComponent(color, position) moved outside event listener
 
-        // Function to convert hex to RGB
-        function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            const red = (bigint >> 16) & 255;
-            const green = (bigint >> 8) & 255;
-            const blue = bigint & 255;
-            return [red, green, blue];
-        }
 
 
      
@@ -828,6 +909,11 @@ function loadPixelArrayFromJTFile(data) {
                     drawPixels();
                     updateFrameDisplay();
                     setTimeout(animate, delays);
+                } else {
+                    // Reset play button icon when animation stops
+                    const playPauseIcon = document.querySelector("#playPauseButton i");
+                    playPauseIcon.classList.remove("fa-pause");
+                    playPauseIcon.classList.add("fa-play");
                 }
             }
 
@@ -835,38 +921,6 @@ function loadPixelArrayFromJTFile(data) {
         }
     // --- End Animation functions ---
 
-//  ---  function convertJTDataToPixelArrayFrames() does not work ---
-function convertJTDataToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames) {
-    const pixelArrayFrames = [];
-    const pixelsPerFrame = pixelWidth * pixelHeight;
-    const totalPixels = pixelsPerFrame * totalFrames;
-
-    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        const frameStartIndex = frameIndex * pixelsPerFrame * 3;
-        const pixelArray = [];
-
-        for (let i = 0; i < pixelHeight; i++) {
-            const row = [];
-            for (let j = 0; j < pixelWidth; j++) {
-                const pixelIndex = i * pixelWidth + j;
-                const redIndex = frameStartIndex + pixelIndex;
-                const greenIndex = frameStartIndex + pixelIndex + totalPixels; // Offset for green values
-                const blueIndex = frameStartIndex + pixelIndex + totalPixels * 2; // Offset for blue values
-
-                const red = jtData[redIndex];
-                const green = jtData[greenIndex];
-                const blue = jtData[blueIndex];
-                
-                const hexColor = rgbToHex(red, green, blue);
-                row.push(hexColor);
-            }
-            pixelArray.push(row);
-        }
-        pixelArrayFrames.push(pixelArray);
-    }
-    return pixelArrayFrames;
-}
-//   ------------------------------------------------------------------------------   
 
     // Initialize the GUI
     // Create first pixel array from selectedSize global var using rtmouseBtnColor background
@@ -1074,29 +1128,7 @@ function putBinaryComponent(color) {
             return colorMap[color];
 }            
 
-// --- convert text color to hex value --- //
-function colorNameToHex(color){
-   const mymap={
-                "Black":"#000000", // Black
-                "Red":"#FF0000", // Red
-                "Green":"#00FF00", // Green
-                "Yellow":"#FFFF00", // Yellow
-                "Blue":"#0000FF", // Blue
-                "Magenta":"#FF00FF", // Magenta
-                "Cyan":"#00FFFF", // Cyan
-                "White":"#FFFFFF" // White
-              };
-  return mymap[color].toString();
-}
 
-// --- return RGB array from hex --- //
-function pixarrToRgb(hex) {
-  const bigint = parseInt(hex.slice(1), 16);
-  const red = (bigint >> 16) & 255;
-  const green = (bigint >> 8) & 255;
-  const blue = bigint & 255;
-  return [red, green, blue];
-}
 
 // --- Enhanced responsive pixel scaling system --- //
 function getScreenBreakpoint() {
@@ -1247,10 +1279,12 @@ function updateAutoScaleStatus() {
     const statusElement = document.getElementById("autoScaleStatus");
     if (autoScaling) {
         statusElement.textContent = "ON";
-        statusElement.className = "scale-status on";
+        statusElement.className = "scale-status on tooltip";
+        statusElement.setAttribute("data-tooltip", "Auto scaling is currently enabled - pixel size adjusts automatically based on screen size");
     } else {
         statusElement.textContent = "OFF";
-        statusElement.className = "scale-status off";
+        statusElement.className = "scale-status off tooltip";
+        statusElement.setAttribute("data-tooltip", "Auto scaling is disabled - use zoom controls or pixel size input to adjust manually");
     }
 }
 
@@ -1580,10 +1614,6 @@ function id(x){return document.getElementById(x);}
 // end swap_diag dialog functions##########################################
 
 // --- debug functions --- //
-function debug_update(){
-  //updates display, for debugging
-  document.getElementById('upButton').click();document.getElementById('downButton').click();
-}
 
 function debug_init(){ 
   //init some parameters, for debugging
