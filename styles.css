@@ -1,3 +1,16 @@
+:root {
+    /* Responsive toolbar sizing variables */
+    --toolbar-scale: clamp(0.8, 1 + 0.02vw, 2.5);
+    --toolbar-button-width: calc(26px * var(--toolbar-scale));
+    --toolbar-button-height: calc(23px * var(--toolbar-scale));
+    --toolbar-font-size: calc(15px * var(--toolbar-scale));
+    --toolbar-icon-font: calc(12px * var(--toolbar-scale));
+    --toolbar-label-font: calc(10px * var(--toolbar-scale));
+    --toolbar-padding: calc(8px * var(--toolbar-scale));
+    --toolbar-gap: calc(16px * var(--toolbar-scale));
+    --toolbar-element-gap: calc(12px * var(--toolbar-scale));
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -15,9 +28,9 @@ button {
 
 /* Override for toolbar buttons */
 .toolbar-container button {
-  min-width: 26px;
-  min-height: 23px;
-  font-size: 15px;
+  min-width: var(--toolbar-button-width);
+  min-height: var(--toolbar-button-height);
+  font-size: var(--toolbar-font-size);
   font-weight: bold;
 }
 
@@ -40,6 +53,12 @@ button {
     cursor: pointer;
 }
 
+#pixelCanvasContainer {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
 #pixelCanvas {
     border: 1px solid #000;
     display: grid;
@@ -47,6 +66,7 @@ button {
     gap: 1px;
     padding: 0 15px; /* Added padding */
     margin-bottom: 10px; /* Added margin-bottom */
+    width: fit-content;
 }
 
 #textDisplay {
@@ -267,51 +287,54 @@ min-width: 3ch;
 .toolbar-container {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 2px;
+    gap: max(4px, calc(4px * var(--toolbar-scale)));
+    padding: max(12px, calc(12px * var(--toolbar-scale)));
     background: #f8f9fa;
     border-radius: 3px;
-    margin: 2px;
-    max-width: 1200px;
+    margin: 2px auto;
+    width: fit-content;
+    max-width: 100%;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .toolbar-row {
     display: flex;
-    gap: 8px;
+    gap: max(24px, calc(24px * var(--toolbar-scale)));
     align-items: center;
     flex-wrap: wrap;
-    padding: 2px 4px;
+    padding: max(8px, calc(8px * var(--toolbar-scale))) max(12px, calc(12px * var(--toolbar-scale)));
     background: white;
     border-radius: 2px;
     border: 1px solid #e0e0e0;
-    min-height: 23px;
+    min-height: calc(var(--toolbar-button-height) + 10px);
 }
 
 .tool-group {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: max(10px, calc(10px * var(--toolbar-scale)));
     min-width: auto;
+    padding: 0 max(8px, calc(8px * var(--toolbar-scale)));
 }
 
 .group-label {
     font-weight: 600;
-    font-size: 10px;
+    font-size: var(--toolbar-label-font);
     color: #555;
     text-transform: uppercase;
     letter-spacing: 0.1px;
     margin: 0;
     border-bottom: 1px solid transparent;
-    padding: 0 2px 0 0;
+    padding: 4px 16px 4px 4px;
     white-space: nowrap;
 }
 
 .inline-controls {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: max(10px, calc(10px * var(--toolbar-scale)));
     flex-wrap: wrap;
+    padding: 0 8px;
 }
 
 .control-pair {
@@ -319,10 +342,11 @@ min-width: 3ch;
     flex-direction: column;
     gap: 1px;
     align-items: flex-start;
+    padding: 4px 10px 4px 10px;
 }
 
 .control-pair label {
-    font-size: 10px;
+    font-size: var(--toolbar-label-font);
     color: #666;
     font-weight: 500;
     line-height: 1;
@@ -330,21 +354,21 @@ min-width: 3ch;
 }
 
 .control-input {
-    padding: 1px 3px;
+    padding: calc(1px * var(--toolbar-scale)) calc(3px * var(--toolbar-scale));
     border: 1px solid #ddd;
     border-radius: 2px;
-    font-size: 12px;
+    font-size: var(--toolbar-icon-font);
     background: white;
     transition: border-color 0.2s ease;
-    min-width: 45px;
-    height: 18px;
+    min-width: calc(45px * var(--toolbar-scale));
+    height: calc(18px * var(--toolbar-scale));
 }
 
 .control-input.compact {
-    min-width: 40px;
-    padding: 1px 2px;
-    font-size: 11px;
-    height: 16px;
+    min-width: calc(40px * var(--toolbar-scale));
+    padding: calc(1px * var(--toolbar-scale)) calc(2px * var(--toolbar-scale));
+    font-size: calc(11px * var(--toolbar-scale));
+    height: calc(16px * var(--toolbar-scale));
 }
 
 .control-input:focus {
@@ -375,28 +399,28 @@ min-width: 3ch;
     background: #f5f5f5;
     border: 1px solid #ddd;
     border-radius: 2px;
-    padding: 1px 3px;
+    padding: calc(1px * var(--toolbar-scale)) calc(3px * var(--toolbar-scale));
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: var(--toolbar-icon-font);
     font-weight: 500;
     color: #666;
-    min-width: 18px;
-    height: 12px;
+    min-width: calc(18px * var(--toolbar-scale));
+    height: calc(12px * var(--toolbar-scale));
     line-height: 1;
 }
 
 .icon-btn-sm svg {
-    width: 14px;
-    height: 14px;
+    width: calc(14px * var(--toolbar-scale));
+    height: calc(14px * var(--toolbar-scale));
     color: currentColor;
 }
 
 .icon-btn-sm i {
-    font-size: 14px;
+    font-size: calc(14px * var(--toolbar-scale));
     color: currentColor;
 }
 
@@ -404,6 +428,22 @@ min-width: 3ch;
     background: #e0e0e0;
     border-color: #bbb;
     color: #333;
+}
+
+/* File button and tools base styles */
+.file-btn {
+    padding: 4px;
+}
+
+.file-tools {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 10px 4px 10px;
+}
+
+.paint-btn {
+    padding: 4px;
 }
 
 /* Zoom controls */
@@ -441,6 +481,7 @@ min-width: 3ch;
     display: flex;
     align-items: center;
     gap: 4px;
+    padding: 4px 10px 4px 10px;
 }
 
 .color-stack {
@@ -617,5 +658,178 @@ min-width: 3ch;
     
     .unified-color-selector {
         justify-content: center;
+    }
+}
+
+/* Enhanced media queries for better toolbar scaling */
+@media (min-width: 1200px) {
+    /* Larger screens - ensure proper spacing */
+    .group-label {
+        padding: 6px 20px 6px 6px;
+    }
+    
+    .inline-controls {
+        padding: 0 12px;
+    }
+    
+    .tool-group {
+        gap: 14px;
+    }
+}
+
+@media (min-width: 1600px) {
+    /* Even larger screens - more spacing */
+    .group-label {
+        padding: 8px 24px 8px 8px;
+    }
+    
+    .inline-controls {
+        padding: 0 16px;
+    }
+    
+    .tool-group {
+        gap: 18px;
+    }
+}
+
+@media (min-width: 1800px) {
+    /* Ultra-wide screens - single row layout */
+    .toolbar-container {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 0;
+    }
+    
+    .toolbar-row {
+        display: flex;
+        flex-wrap: nowrap;
+        flex: 1;
+        border-radius: 0;
+        border-right: none;
+        padding: 6px 12px;
+    }
+    
+    .toolbar-row.primary-row {
+        border-radius: 2px 0 0 2px;
+        border-right: 1px solid #e0e0e0;
+    }
+    
+    .toolbar-row.color-row {
+        border-radius: 0 2px 2px 0;
+        border-left: none;
+    }
+    
+    /* Remove colored borders on single row */
+    .primary-row {
+        border-left: none;
+    }
+    
+    .color-row {
+        border-left: none;
+    }
+    
+    /* Distribute space evenly */
+    .tool-group {
+        flex: 0 1 auto;
+    }
+    
+    /* Make icon buttons larger to match zoom buttons */
+    .icon-btn-sm {
+        min-width: calc(32px * var(--toolbar-scale));
+        height: calc(28px * var(--toolbar-scale));
+        padding: calc(6px * var(--toolbar-scale)) calc(8px * var(--toolbar-scale));
+        font-size: var(--toolbar-font-size);
+        margin: 0 2px;
+    }
+    
+    .icon-btn-sm i {
+        font-size: calc(16px * var(--toolbar-scale));
+    }
+    
+    .icon-btn-sm svg {
+        width: calc(18px * var(--toolbar-scale));
+        height: calc(18px * var(--toolbar-scale));
+    }
+    
+    /* Ensure zoom controls have consistent spacing */
+    .zoom-controls {
+        gap: calc(4px * var(--toolbar-scale));
+    }
+    
+    .zoom-controls .icon-btn-sm {
+        margin: 0;
+    }
+    
+}
+
+@media (max-width: 1024px) {
+    /* Tablets and small laptops */
+    :root {
+        --toolbar-scale: 0.9;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Small tablets */
+    :root {
+        --toolbar-scale: 0.85;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Mobile devices */
+    :root {
+        --toolbar-scale: 0.75;
+    }
+}
+
+/* Enhanced tooltips for control and direction buttons */
+#controlButtons button[title],
+#directionButtons button[title] {
+    position: relative;
+}
+
+#controlButtons button[title]:hover::after,
+#directionButtons button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-size: 13px;
+    font-weight: normal;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    animation: tooltipFade 0.2s ease-in;
+}
+
+#controlButtons button[title]:hover::before,
+#directionButtons button[title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: -5px;
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+    z-index: 1001;
+    pointer-events: none;
+}
+
+@keyframes tooltipFade {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
     }
 }
