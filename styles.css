@@ -84,6 +84,73 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
+    
+    /* Modern gradient background */
+    background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-white) 50%, var(--color-gray-50) 100%);
+    
+    /* Subtle pixel grid pattern overlay */
+    background-image: 
+        radial-gradient(circle at 1px 1px, rgba(33, 150, 243, 0.08) 1px, transparent 0);
+    background-size: 20px 20px;
+    background-attachment: fixed;
+    
+    /* Subtle texture overlay */
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="subtle-grid" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="none"/><rect x="0" y="0" width="1" height="1" fill="rgba(33,150,243,0.02)"/></pattern></defs><rect width="100" height="100" fill="url(%23subtle-grid)"/></svg>') repeat;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ===== PAGE HEADER STYLES ===== */
+.page-header {
+    width: 100%;
+    text-align: center;
+    padding: var(--space-lg) var(--space-xl);
+    background: linear-gradient(135deg, var(--color-primary) 0%, #1976D2 100%);
+    color: var(--color-white);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>') repeat;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    position: relative;
+    z-index: 1;
+}
+
+.page-header .subtitle {
+    margin: var(--space-xs) 0 0 0;
+    font-size: var(--font-sm);
+    opacity: 0.9;
+    font-weight: 400;
+    position: relative;
+    z-index: 1;
 }
 
 /* ===== COMPONENT SYSTEM - BASE CLASSES ===== */
@@ -1096,10 +1163,39 @@ button {
     cursor: pointer;
     border-radius: 2px;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 .recent-color:hover {
     border: 1px solid #007AFF;
+}
+
+/* Empty placeholder styling */
+.recent-color-empty {
+    background-color: transparent !important;
+    border: 1px dashed #ccc !important;
+    position: relative;
+}
+
+.recent-color-empty::before {
+    content: '+';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #999;
+    font-size: 10px;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+.recent-color-empty:hover {
+    border: 1px dashed #007AFF !important;
+    background-color: rgba(0, 122, 255, 0.1) !important;
+}
+
+.recent-color-empty:hover::before {
+    color: #007AFF;
 }
 
 .paint-tools {
@@ -1273,15 +1369,20 @@ button {
 .selection-border {
     border: 1px dashed var(--color-gray-800);
     background: transparent;
-    pointer-events: none;
+    pointer-events: auto; /* Enable pointer events for move functionality */
+    cursor: move;
 }
 
 .marching-ants {
-    border: 2px dashed #000;
+    border: 3px dashed #000;
     background: transparent;
     animation: marchingAnts 0.5s linear infinite;
     outline: 1px dashed #FFF;
     outline-offset: -1px;
+    cursor: move;
+    
+    /* Make the border more substantial and easier to click */
+    box-sizing: border-box;
 }
 
 @keyframes marchingAnts {
@@ -1497,8 +1598,12 @@ button {
     background: var(--color-gray-50);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-gray-200);
-    min-width: 120px;
+    min-width: 140px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
 }
 
 /* Tool Tips Enhancement */

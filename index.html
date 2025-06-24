@@ -20,7 +20,10 @@
 
     <body>
 
-        <h2>JT Edit - For CoolLED1248</h2>
+        <header class="page-header">
+            <h1>JT Edit</h1>
+            <p class="subtitle">for CoolLED1248 based LED Panels</p>
+        </header>
 
         <!-- Compact 2-Row Toolbar Interface -->
         <div class="toolbar-container">
@@ -207,6 +210,9 @@
         <!-- Selection Info Panel -->
         <div id="selectionInfoPanel" class="selection-info" style="display: none;">
             <span id="selectionSize">No selection</span>
+            <button id="clearSelectionButton" class="btn btn--icon-sm tooltip" title="Clear Selection (Escape)" data-tooltip="Clear the current selection">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
         <div id="pixelCanvasContainer">

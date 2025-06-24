@@ -81,6 +81,7 @@ let delays          = 250;
 let dataType        = 1; // default to static
 let colorFormat     = '3bit'; // '3bit' or '24bit'
 let recentColors    = []; // Array to store recently used colors in 24-bit mode
+let recent3BitColors = []; // Array to store recently used colors in 3-bit mode
 
 // Function to convert RGB to hex
 function rgbToHex(r, g, b) {
@@ -575,6 +576,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply responsive scaling for new size
             applyResponsiveScaling();
             
+            // Invalidate selection positioning cache when canvas size changes
+            if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+                window.JTEdit.currentSelectionManager.onLayoutChange();
+            }
+            
             drawPixels();
             updateTextDisplay();
         }
@@ -691,9 +697,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 picker24bit.style.display = 'flex';
                 // Sync the current color to the 24-bit picker
                 sync24BitPickerColor();
+                // Initialize recent colors grid for 24-bit mode
+                updateRecentColorsGrid();
             } else {
                 picker3bit.style.display = 'block';
                 picker24bit.style.display = 'none';
+                // Initialize recent colors grid for 3-bit mode
+                updateRecentColorsGrid();
             }
         }
 
@@ -708,28 +718,108 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to add color to recent colors
         function addToRecentColors(color) {
-            if (!recentColors.includes(color)) {
-                recentColors.unshift(color);
-                if (recentColors.length > 5) {
-                    recentColors.pop();
+            if (colorFormat === '24bit') {
+                if (!recentColors.includes(color)) {
+                    recentColors.unshift(color);
+                    if (recentColors.length > 5) {
+                        recentColors.pop();
+                    }
+                    updateRecentColorsGrid();
                 }
-                updateRecentColorsGrid();
+            } else {
+                // 3-bit mode
+                addTo3BitRecentColors(color);
+            }
+        }
+
+        // Function to add color to 3-bit recent colors
+        function addTo3BitRecentColors(color) {
+            if (!recent3BitColors.includes(color)) {
+                recent3BitColors.unshift(color);
+                if (recent3BitColors.length > 5) {
+                    recent3BitColors.pop();
+                }
+                update3BitRecentColorsGrid();
             }
         }
 
         // Function to update recent colors grid
         function updateRecentColorsGrid() {
+            if (colorFormat === '24bit') {
+                update24BitRecentColorsGrid();
+            } else {
+                update3BitRecentColorsGrid();
+            }
+        }
+
+        // Function to update 24-bit recent colors grid
+        function update24BitRecentColorsGrid() {
             const grid = document.getElementById("recentColorsGrid");
             grid.innerHTML = '';
             
-            recentColors.forEach(color => {
+            // Always create 5 slots for consistent UI in 24-bit mode
+            for (let i = 0; i < 5; i++) {
+                const colorDiv = document.createElement('div');
+                
+                if (i < recentColors.length) {
+                    // Populated slot with existing color
+                    const color = recentColors[i];
+                    colorDiv.className = 'recent-color';
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.title = color;
+                    colorDiv.addEventListener('click', () => {
+                        selectedColor = color;
+                        sync24BitPickerColor();
+                        updatePaletteIconColor();
+                        updateColorPreviews();
+                    });
+                } else {
+                    // Empty slot placeholder
+                    colorDiv.className = 'recent-color recent-color-empty';
+                    colorDiv.style.backgroundColor = 'transparent';
+                    colorDiv.title = 'Click to add a color';
+                    colorDiv.addEventListener('click', () => {
+                        // Trigger color picker to populate this empty slot
+                        const htmlColorPicker = document.getElementById("htmlColorPicker");
+                        if (htmlColorPicker) {
+                            // Create a temporary event handler for this empty slot
+                            const tempHandler = function() {
+                                // Add the selected color to recent colors
+                                addToRecentColors(htmlColorPicker.value);
+                                // Set as current selected color
+                                selectedColor = htmlColorPicker.value;
+                                updatePaletteIconColor();
+                                updateColorPreviews();
+                                // Remove the temporary handler
+                                htmlColorPicker.removeEventListener('change', tempHandler);
+                            };
+                            
+                            htmlColorPicker.addEventListener('change', tempHandler);
+                            htmlColorPicker.click();
+                        }
+                    });
+                }
+                
+                grid.appendChild(colorDiv);
+            }
+        }
+
+        // Function to update 3-bit recent colors grid
+        function update3BitRecentColorsGrid() {
+            const grid = document.getElementById("recentColorsGrid");
+            grid.innerHTML = '';
+            
+            // Only show populated colors in 3-bit mode (no placeholders)
+            recent3BitColors.forEach(color => {
                 const colorDiv = document.createElement('div');
                 colorDiv.className = 'recent-color';
                 colorDiv.style.backgroundColor = color;
                 colorDiv.title = color;
                 colorDiv.addEventListener('click', () => {
                     selectedColor = color;
-                    sync24BitPickerColor();
+                    // Update the 3-bit color picker dropdown
+                    const customColorPicker = document.getElementById("customColorPicker");
+                    customColorPicker.value = color;
                     updatePaletteIconColor();
                     updateColorPreviews();
                 });
@@ -756,6 +846,11 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedColor = customColorPicker.value;
         updatePaletteIconColor();
         updateColorPreviews();
+        
+        // Add to recent colors in 3-bit mode
+        if (colorFormat === '3bit') {
+            addToRecentColors(selectedColor);
+        }
     });
 
     // Event listeners for 24-bit color picker
@@ -786,6 +881,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("foregroundColorPreview").addEventListener("click", selectForegroundColor);
     document.getElementById("backgroundColorPreview").addEventListener("click", selectBackgroundColor);
     document.getElementById("swapColorsButton").addEventListener("click", swapColors);
+
+    // Selection control event listeners
+    document.getElementById("clearSelectionButton").addEventListener("click", clearSelection);
 
     // Function to open file input
     window.openFileInput = function() {
@@ -928,6 +1026,11 @@ function loadPixelArrayFromJTFile(data) {
         // Apply responsive scaling for loaded file
         applyResponsiveScaling();
         
+        // Invalidate selection positioning cache when JT file loads with new dimensions
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
+        }
+        
         drawPixels();
         updateTextDisplay();
 
@@ -973,6 +1076,11 @@ function loadPixelArrayFromJTFile(data) {
         
         // Apply responsive scaling for loaded image
         applyResponsiveScaling();
+        
+        // Invalidate selection positioning cache when image loads with new dimensions
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
+        }
         
         drawPixels();
         updateTextDisplay();
@@ -1207,6 +1315,11 @@ function loadPixelArrayFromJTFile(data) {
         pixelHeight = parseInt(selectedSize.split('x')[0]);
         pixelWidth = parseInt(selectedSize.split('x')[1]);
         
+        // Invalidate selection positioning cache after scaling
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
+        }
+        
         drawPixels();
         updateTextDisplay();
     }
@@ -1269,6 +1382,11 @@ function loadPixelArrayFromJTFile(data) {
         } else {
             // No content, proceed with normal size change
             handleSizeChange();
+        }
+        
+        // Always invalidate selection cache when size changes
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
         }
     }
 
@@ -1594,6 +1712,12 @@ function fitToScreen() {
     
     // Apply the optimal size but keep current auto-scaling preference
     pixelSizeInput.value = optimalSize;
+    
+    // Invalidate selection cache when fit to screen changes pixel size
+    if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+        window.JTEdit.currentSelectionManager.onLayoutChange();
+    }
+    
     drawPixels();
     
     console.log(`Fit to Screen: Applied optimal size ${optimalSize}px (Auto Scale: ${autoScaling ? 'ON' : 'OFF'})`);
@@ -1617,6 +1741,12 @@ function zoomIn() {
         document.getElementById("autoScaleToggle").checked = false;
         updateAutoScaleStatus();
         pixelSizeInput.value = newSize;
+        
+        // Invalidate selection cache when zoom changes
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
+        }
+        
         drawPixels();
     }
 }
@@ -1631,6 +1761,12 @@ function zoomOut() {
         document.getElementById("autoScaleToggle").checked = false;
         updateAutoScaleStatus();
         pixelSizeInput.value = newSize;
+        
+        // Invalidate selection cache when zoom changes
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.onLayoutChange();
+        }
+        
         drawPixels();
     }
 }
@@ -1723,6 +1859,13 @@ function swapColors() {
     
     updateColorPreviews();
     updatePaletteIconColor();
+}
+
+// Function to clear the current selection
+function clearSelection() {
+    if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+        window.JTEdit.currentSelectionManager.clear();
+    }
 }
 
     // Function to update text display below canvas with RGB data representation
@@ -1824,6 +1967,11 @@ function swapColors() {
         const pixelSizeInput    = document.getElementById("pixelSizeInput");
         const pixelSize         = parseInt(pixelSizeInput.value, 10) || 8; // Default to 8 if invalid or not provided
 
+        // Update selection manager pixel size if it has changed
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.setPixelSize(pixelSize);
+        }
+
         // Calculate the width of each pixel based on the container size and array width
         const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;
 
@@ -1852,12 +2000,6 @@ function swapColors() {
                         togglePixel(rowIndex, columnIndex);
                     } else if (window.currentTool.startsWith('select') && window.JTEdit.currentSelectionManager.isSelecting) {
                         window.JTEdit.currentSelectionManager.updateSelection(rowIndex, columnIndex);
-                    }
-                });
-                
-                pixel.addEventListener('mouseup', (event) => {
-                    if (window.currentTool.startsWith('select')) {
-                        window.JTEdit.currentSelectionManager.endSelection();
                     }
                 }); 
 
