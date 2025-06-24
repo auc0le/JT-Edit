@@ -5,6 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>JT Editor</title>
         <script src="components.js"></script>
+        <script src="selection.js"></script>
+        <script src="history.js"></script>
+        <script src="scaling.js"></script>
         <script src="keyboard-shortcuts.js"></script>
         <script src="app.js"></script>
         <!-- CDN content replaced with server-side assets -->
@@ -28,11 +31,11 @@
                     <label class="group-label">File</label>
                     <div class="inline-controls">
                         <div class="file-tools">
-                            <button onclick="openFileInput()" class="icon-btn-sm file-btn tooltip" title="Open File (Ctrl+O)" data-tooltip="Open JT files or import PNG images">
+                            <button onclick="openFileInput()" class="btn btn--icon-sm file-btn tooltip" title="Open File (Ctrl+O)" data-tooltip="Open JT files or import PNG images">
                                 <i class="fas fa-folder-open"></i>
                             </button>
                             <input type="file" id="imageInput" accept=".jpeg, .jpg, .jt" style="display: none;">
-                            <button onclick="saveToFile()" class="icon-btn-sm file-btn tooltip" title="Save File (Ctrl+S)" data-tooltip="Save as JT file or export as PNG">
+                            <button onclick="saveToFile()" class="btn btn--icon-sm file-btn tooltip" title="Save File (Ctrl+S)" data-tooltip="Save as JT file or export as PNG">
                                 <i class="fas fa-save"></i>
                             </button>
                         </div>
@@ -44,7 +47,7 @@
                                 <option value="png">PNG</option>
                             </select>
                         </div>
-                        <button id="debugToggle" class="icon-btn-sm debug-btn tooltip" title="Show/Hide RGB Array" data-tooltip="Toggle display of RGB array data for debugging">
+                        <button id="debugToggle" class="btn btn--icon-sm debug-btn tooltip" title="Show/Hide RGB Array" data-tooltip="Toggle display of RGB array data for debugging">
                             <i class="fas fa-bug"></i>
                         </button>
                     </div>
@@ -99,9 +102,9 @@
                             <input type="number" id="pixelSizeInput" class="control-input compact tooltip" min="1" value="8" max="50" title="Pixel Size" data-tooltip="Adjust the display size of pixels (larger = more zoom)">
                         </div>
                         <div class="zoom-controls">
-                            <button id="zoomOutButton" class="icon-btn-sm tooltip" title="Zoom Out (-)" data-tooltip="Decrease pixel size manually"><i class="fas fa-minus"></i></button>
-                            <button id="fitToScreenButton" class="icon-btn-sm fit tooltip" title="Fit to Screen (F)" data-tooltip="Automatically adjusts pixel size to fit canvas on screen"><i class="fas fa-expand-arrows-alt"></i></button>
-                            <button id="zoomInButton" class="icon-btn-sm tooltip" title="Zoom In (+)" data-tooltip="Increase pixel size manually"><i class="fas fa-plus"></i></button>
+                            <button id="zoomOutButton" class="btn btn--icon-sm tooltip" title="Zoom Out (-)" data-tooltip="Decrease pixel size manually"><i class="fas fa-minus"></i></button>
+                            <button id="fitToScreenButton" class="btn btn--icon-sm fit tooltip" title="Fit to Screen (F)" data-tooltip="Automatically adjusts pixel size to fit canvas on screen"><i class="fas fa-expand-arrows-alt"></i></button>
+                            <button id="zoomInButton" class="btn btn--icon-sm tooltip" title="Zoom In (+)" data-tooltip="Increase pixel size manually"><i class="fas fa-plus"></i></button>
                         </div>
                         <div class="control-pair">
                             <label id="autoScaleLabel" class="checkbox-label tooltip" data-tooltip="Automatically adjusts pixel size to fit your screen for optimal viewing">
@@ -153,22 +156,57 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Row 3: Tools & Actions -->
+            <div class="toolbar-row tools-row">
+                <div class="tool-group tools-group">
+                    <label class="group-label">Tools</label>
+                    <div class="tool-selection-group">
+                        <button id="paintTool" class="tool-btn active tooltip" title="Paint Tool (P)" data-tooltip="Click and drag to paint pixels">
+                            <i class="fas fa-paint-brush"></i>
+                        </button>
+                        <button id="selectRectTool" class="tool-btn tooltip" title="Rectangle Select (R)" data-tooltip="Select rectangular area">
+                            <i class="fas fa-vector-square"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tool-group history-group">
+                    <label class="group-label">History</label>
+                    <div class="history-controls">
+                        <button id="undoButton" class="history-btn btn btn--icon-sm tooltip" title="Undo (Ctrl+Z)" data-tooltip="Undo last action" disabled>
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button id="redoButton" class="history-btn btn btn--icon-sm tooltip" title="Redo (Ctrl+Y)" data-tooltip="Redo last undone action" disabled>
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <span class="history-status" id="historyStatus">No actions</span>
+                    </div>
+                </div>
+
                 <div class="tool-group paint-group">
                     <label class="group-label">Paint</label>
                     <div class="paint-tools">
-                        <button id="paintBucketButton" class="icon-btn-sm paint-btn tooltip" title="Fill with Foreground Color (Shift+F)" data-tooltip="Fill entire canvas with the selected foreground color">
+                        <button id="paintBucketButton" class="btn btn--icon-sm paint-btn tooltip" title="Fill with Foreground Color (Shift+F)" data-tooltip="Fill entire canvas with the selected foreground color">
                             <i class="fas fa-paint-roller"></i>
                         </button>
-                        <button id="RMBpaintBucketButton" class="icon-btn-sm paint-btn tooltip" title="Fill with Background Color (Shift+B)" data-tooltip="Fill entire canvas with the selected background color">
+                        <button id="RMBpaintBucketButton" class="btn btn--icon-sm paint-btn tooltip" title="Fill with Background Color (Shift+B)" data-tooltip="Fill entire canvas with the selected background color">
                             <i class="fas fa-fill"></i>
                         </button>
-                        <button id="helpButton" class="icon-btn-sm help-btn tooltip" title="Help & Shortcuts (F1)" data-tooltip="Show keyboard shortcuts and help information">
+                        <button id="helpButton" class="btn btn--icon-sm help-btn tooltip" title="Help & Shortcuts (F1)" data-tooltip="Show keyboard shortcuts and help information">
                             <i class="fas fa-question"></i>
                         </button>
                     </div>
                 </div>
             </div>
             
+        </div>
+
+
+        <!-- Selection Info Panel -->
+        <div id="selectionInfoPanel" class="selection-info" style="display: none;">
+            <span id="selectionSize">No selection</span>
         </div>
 
         <div id="pixelCanvasContainer">

@@ -335,6 +335,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // New feature shortcuts
+    
+    // Tool selection shortcuts
+    shortcuts.register('p', () => {
+        const paintTool = document.getElementById('paintTool');
+        if (paintTool && !paintTool.disabled) {
+            paintTool.click();
+        }
+    });
+    
+    shortcuts.register('r', () => {
+        const selectRectTool = document.getElementById('selectRectTool');
+        if (selectRectTool && !selectRectTool.disabled) {
+            selectRectTool.click();
+        }
+    });
+    
+    
+    
+    // History shortcuts
+    shortcuts.register('ctrl+z', () => {
+        const undoBtn = document.getElementById('undoButton');
+        if (undoBtn && !undoBtn.disabled) {
+            undoBtn.click();
+        }
+    });
+    
+    shortcuts.register('ctrl+y', () => {
+        const redoBtn = document.getElementById('redoButton');
+        if (redoBtn && !redoBtn.disabled) {
+            redoBtn.click();
+        }
+    });
+    
+    shortcuts.register('ctrl+shift+z', () => {
+        const redoBtn = document.getElementById('redoButton');
+        if (redoBtn && !redoBtn.disabled) {
+            redoBtn.click();
+        }
+    });
+    
+    // Selection shortcuts
+    shortcuts.register('ctrl+a', () => {
+        // Select all - need to access the selection manager from global scope
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.selectAll(
+                parseInt(document.getElementById('sizeDropdown').value.split('x')[0]),
+                parseInt(document.getElementById('sizeDropdown').value.split('x')[1])
+            );
+        }
+    });
+    
+    shortcuts.register('escape', () => {
+        // Clear selection or cancel current tool operation
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.clear();
+        }
+    });
+    
+    // Copy/Cut/Paste shortcuts
+    shortcuts.register('ctrl+c', () => {
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
+            window.JTEdit.currentSelectionManager.copy(pixelArray);
+        }
+    });
+    
+    shortcuts.register('ctrl+x', () => {
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
+            const backgroundColor = window.rtmouseBtnColor || '#000000';
+            window.JTEdit.currentSelectionManager.cut(pixelArray, backgroundColor);
+        }
+    });
+    
+    shortcuts.register('ctrl+v', () => {
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
+            // Paste at center of canvas by default
+            const centerRow = Math.floor(window.pixelHeight / 2);
+            const centerCol = Math.floor(window.pixelWidth / 2);
+            window.JTEdit.currentSelectionManager.paste(pixelArray, centerRow, centerCol);
+        }
+    });
+    
     // Disable shortcuts when typing in input fields
     const inputs = ['input', 'textarea', 'select'];
     document.addEventListener('focusin', (e) => {

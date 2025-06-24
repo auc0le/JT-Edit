@@ -306,6 +306,46 @@ body {
     border-left: 3px solid var(--color-info);
 }
 
+/* Tools Row Specific Styling */
+.tools-row {
+    border-top: 1px solid var(--color-gray-200);
+    margin-top: var(--space-xs);
+    padding-top: var(--space-sm);
+}
+
+/* Group Label Colors for Different Categories */
+.tools-group .group-label {
+    color: #FF9800; /* Orange for tools (3rd row) */
+}
+
+.history-group .group-label {
+    color: #FF9800; /* Orange for history tools (3rd row) */
+}
+
+.paint-group .group-label {
+    color: #FF9800; /* Orange for paint tools (3rd row) */
+}
+
+.file-group .group-label {
+    color: #2196F3; /* Blue for file operations (1st row) */
+}
+
+.view-group .group-label {
+    color: #FFC107; /* Yellow for view controls (2nd row) */
+}
+
+.canvas-group .group-label {
+    color: #2196F3; /* Blue for canvas settings (1st row) */
+}
+
+.color-format-group .group-label {
+    color: #2196F3; /* Blue for color format (1st row) */
+}
+
+.unified-color-group .group-label {
+    color: #FFC107; /* Yellow for color selection (2nd row) */
+}
+
 /* Tool Group Component */
 .tool-group {
     display: flex;
@@ -955,10 +995,18 @@ button {
 }
 
 .color-row {
-    border-left: 3px solid #FF9800;
+    border-left: 3px solid #FFC107;
 }
 
 .color-row .group-label {
+    border-bottom-color: #FFC107;
+}
+
+.tools-row {
+    border-left: 3px solid #FF9800;
+}
+
+.tools-row .group-label {
     border-bottom-color: #FF9800;
 }
 
@@ -1198,40 +1246,421 @@ button {
         --scale-factor: 0.75;
     }
     
+    .toolbar-container {
+        margin: 2px;
+        padding: 4px;
+    }
+    
     .toolbar-row {
-        flex-direction: column;
-        gap: 8px;
-        align-items: stretch;
+        gap: 4px;
+        padding: 2px 4px;
+    }
+}
+
+/* ===== NEW FEATURES STYLES ===== */
+
+/* Selection System Styles */
+.selection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.selection-border {
+    border: 1px dashed var(--color-gray-800);
+    background: transparent;
+    pointer-events: none;
+}
+
+.marching-ants {
+    border: 2px dashed #000;
+    background: transparent;
+    animation: marchingAnts 0.5s linear infinite;
+    outline: 1px dashed #FFF;
+    outline-offset: -1px;
+}
+
+@keyframes marchingAnts {
+    0% { 
+        border-color: #000;
+        outline-color: #FFF;
+    }
+    50% { 
+        border-color: #FFF;
+        outline-color: #000;
+    }
+    100% { 
+        border-color: #000;
+        outline-color: #FFF;
+    }
+}
+
+
+
+/* Scaling Dialog Styles */
+.scaling-dialog {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: var(--z-modal);
+    align-items: center;
+    justify-content: center;
+}
+
+.scaling-dialog.modal--open {
+    display: flex;
+}
+
+.scaling-dialog__content {
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.scaling-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.option-group label {
+    font-weight: 600;
+    color: var(--color-gray-700);
+    font-size: var(--font-sm);
+}
+
+.preview-section {
+    margin-top: var(--space-xl);
+    border-top: 1px solid var(--color-gray-200);
+    padding-top: var(--space-xl);
+}
+
+.preview-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    text-align: center;
+}
+
+.preview-before h4,
+.preview-after h4 {
+    margin: 0 0 var(--space-md) 0;
+    color: var(--color-gray-700);
+    font-size: var(--font-md);
+}
+
+.preview-canvas {
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--color-gray-50);
+    max-width: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.preview-info {
+    margin-top: var(--space-sm);
+    font-size: var(--font-sm);
+    color: var(--color-gray-600);
+}
+
+/* Tool Selection Styles */
+.tool-selection-group {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-gray-200);
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: calc(var(--button-size) * 0.8);
+    width: calc(var(--button-size) * 0.8);
+    height: calc(var(--button-size) * 0.8);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--color-white);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: var(--space-xs);
+}
+
+.tool-btn:hover {
+    background: var(--color-hover);
+    border-color: var(--color-gray-400);
+}
+
+.tool-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.tool-btn i {
+    font-size: var(--icon-size);
+}
+
+/* History Controls */
+.history-controls {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.history-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: var(--space-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.history-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.history-status {
+    font-size: var(--font-xs);
+    color: var(--color-gray-600);
+    margin: 0 var(--space-sm);
+}
+
+
+/* Progress Bar for Scaling Operations */
+.progress-container {
+    margin: var(--space-lg) 0;
+    display: none;
+}
+
+.progress-container.show {
+    display: block;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--color-gray-200);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+    border-radius: var(--radius-sm);
+}
+
+.progress-text {
+    text-align: center;
+    margin-top: var(--space-xs);
+    font-size: var(--font-sm);
+    color: var(--color-gray-600);
+}
+
+/* Selection Tools in Toolbar */
+.selection-tools {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.selection-info {
+    font-size: var(--font-xs);
+    color: var(--color-gray-600);
+    padding: var(--space-xs);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-gray-200);
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Tool Tips Enhancement */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-gray-800);
+    color: var(--color-white);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-xs);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: var(--z-tooltip);
+    pointer-events: none;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Canvas Container Enhancement for Overlays */
+#pixelCanvasContainer {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: var(--space-lg) auto;
+    width: 100%;
+}
+
+#pixelCanvas {
+    display: grid;
+    margin: 0 auto;
+}
+
+/* Animation for Button State Changes */
+.btn--loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn--loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Error States */
+.btn--error {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    color: var(--color-white);
+}
+
+.btn--error:hover:not(:disabled) {
+    background: #d32f2f;
+    border-color: #d32f2f;
+}
+
+/* Warning States */
+.btn--warning {
+    background: var(--color-warning);
+    border-color: var(--color-warning);
+    color: var(--color-gray-800);
+}
+
+.btn--warning:hover:not(:disabled) {
+    background: #ffa000;
+    border-color: #ffa000;
+}
+
+/* Info States */
+.btn--info {
+    background: var(--color-info);
+    border-color: var(--color-info);
+    color: var(--color-white);
+}
+
+.btn--info:hover:not(:disabled) {
+    background: #0097a7;
+    border-color: #0097a7;
+}
+
+/* Mobile Responsiveness for New Features */
+@media (max-width: 768px) {
+    .scaling-dialog__content {
+        width: 95%;
+        margin: var(--space-md);
     }
     
-    .tool-group {
-        justify-content: center;
+    .preview-comparison {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
     }
     
-    .inline-controls {
-        justify-content: space-between;
+    .scaling-options {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+    }
+    
+    .tool-selection-group {
         flex-wrap: wrap;
     }
     
-    .unified-color-selector {
-        justify-content: center;
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+    .marching-ants {
+        animation: none;
     }
     
-    .toolbar-container {
-        margin: 0;
-        padding: var(--space-xs);
-        border-radius: 0;
+    .btn--loading::after {
+        animation: none;
+        border: 2px solid currentColor;
     }
     
-    .toolbar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--space-md);
-        border-radius: var(--radius-sm);
+    * {
+        transition: none !important;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .selection-border {
+        border-width: 2px;
+        border-color: var(--color-gray-900);
     }
     
-    #pixelCanvasContainer {
-        padding: var(--space-sm);
+    .marching-ants {
+        background-image: 
+            linear-gradient(45deg, 
+                transparent 25%, 
+                var(--color-gray-900) 25%,
+                var(--color-gray-900) 50%, 
+                transparent 50%,
+                transparent 75%, 
+                var(--color-gray-900) 75%);
     }
 }
 

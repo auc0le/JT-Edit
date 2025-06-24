@@ -1,7 +1,7 @@
 // global vars, set for preferred GUI start settings
 var selectedFormat      = "v1";                //file format
 var selectedSize        = "16x32";             //initial canvas size
-var startColor          = "#FFFFFF";           //left mouse btn initial pixel paint color in hex format
+var startColor          = "#FF0000";           //left mouse btn initial pixel paint color in hex format
 var rtmouseBtnColor     = "#000000";           //right mouse btn initial pixel paint color in hex format
 var initialPixelSize    = "20";                //initial pixel size
 var currentMode         = "static";            //initial mode of static or animation
@@ -153,6 +153,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let isPlaying = false; // Variable to track animation state
 
+    // === NEW FEATURE MANAGERS ===
+    
+    // Current tool state (make global for access from event handlers)
+    window.currentTool = 'paint'; // 'paint', 'select-rect'
+    let currentTool = window.currentTool; // Local reference
+    let toolButtonsMap = {};
+    
+    
+    // Initialize History Manager
+    const historyManager = new window.JTEdit.History.HistoryManager({
+        maxHistorySize: 100,
+        onHistoryChange: updateHistoryUI
+    });
+    
+    // Initialize Selection Manager
+    const selectionManager = new window.JTEdit.SelectionManager(
+        canvas,
+        onSelectionChange
+    );
+    
+    
+    // Initialize Canvas Scaler
+    const canvasScaler = new window.JTEdit.Scaling.CanvasScaler();
+    
+    // Initialize Scaling Dialog
+    const scalingDialog = new window.JTEdit.Scaling.ScalingPreviewDialog(
+        document.body,
+        onScalingApply,
+        onScalingCancel
+    );
+
     //set the background color
     document.body.style.backgroundColor=bgColor;
 
@@ -222,25 +253,157 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         document.getElementById('upButton').addEventListener('click', function() {
+            // Capture state before transform for undo
+            const beforeState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            
+            // Perform the shift
             shiftImageUp();
+            
+            // Capture state after transform and create PixelAction with individual pixel changes
+            const afterState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            const changes = [];
+            for (let row = 0; row < pixelHeight; row++) {
+                for (let col = 0; col < pixelWidth; col++) {
+                    if (beforeState[row][col] !== afterState[row][col]) {
+                        changes.push({
+                            row,
+                            col,
+                            oldColor: beforeState[row][col],
+                            newColor: afterState[row][col]
+                        });
+                    }
+                }
+            }
+            
+            if (changes.length > 0) {
+                // Use PixelAction to maintain compatibility with paint actions
+                const action = new window.JTEdit.History.PixelAction(
+                    changes,
+                    pixelArrayFrames[currentFrameIndex],
+                    currentFrameIndex
+                );
+                action.name = 'Shift Up'; // Override the default name
+                action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
+                historyManager.execute(action);
+            }
+            
             drawPixels();
             updateTextDisplay();
         });
 
         document.getElementById('leftButton').addEventListener('click', function() {
+            // Capture state before transform for undo
+            const beforeState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            
+            // Perform the shift
             shiftImageLeft();
+            
+            // Capture state after transform and create PixelAction with individual pixel changes
+            const afterState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            const changes = [];
+            for (let row = 0; row < pixelHeight; row++) {
+                for (let col = 0; col < pixelWidth; col++) {
+                    if (beforeState[row][col] !== afterState[row][col]) {
+                        changes.push({
+                            row,
+                            col,
+                            oldColor: beforeState[row][col],
+                            newColor: afterState[row][col]
+                        });
+                    }
+                }
+            }
+            
+            if (changes.length > 0) {
+                // Use PixelAction to maintain compatibility with paint actions
+                const action = new window.JTEdit.History.PixelAction(
+                    changes,
+                    pixelArrayFrames[currentFrameIndex],
+                    currentFrameIndex
+                );
+                action.name = 'Shift Left'; // Override the default name
+                action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
+                historyManager.execute(action);
+            }
+            
             drawPixels();
             updateTextDisplay();
         });
 
         document.getElementById('downButton').addEventListener('click', function() {
+            // Capture state before transform for undo
+            const beforeState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            
+            // Perform the shift
             shiftImageDown();
+            
+            // Capture state after transform and create PixelAction with individual pixel changes
+            const afterState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            const changes = [];
+            for (let row = 0; row < pixelHeight; row++) {
+                for (let col = 0; col < pixelWidth; col++) {
+                    if (beforeState[row][col] !== afterState[row][col]) {
+                        changes.push({
+                            row,
+                            col,
+                            oldColor: beforeState[row][col],
+                            newColor: afterState[row][col]
+                        });
+                    }
+                }
+            }
+            
+            if (changes.length > 0) {
+                // Use PixelAction to maintain compatibility with paint actions
+                const action = new window.JTEdit.History.PixelAction(
+                    changes,
+                    pixelArrayFrames[currentFrameIndex],
+                    currentFrameIndex
+                );
+                action.name = 'Shift Down'; // Override the default name
+                action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
+                historyManager.execute(action);
+            }
+            
             drawPixels();
             updateTextDisplay();
         });
 
         document.getElementById('rightButton').addEventListener('click', function() {
+            // Capture state before transform for undo
+            const beforeState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            
+            // Perform the shift
             shiftImageRight();
+            
+            // Capture state after transform and create PixelAction with individual pixel changes
+            const afterState = JSON.parse(JSON.stringify(pixelArrayFrames[currentFrameIndex]));
+            const changes = [];
+            for (let row = 0; row < pixelHeight; row++) {
+                for (let col = 0; col < pixelWidth; col++) {
+                    if (beforeState[row][col] !== afterState[row][col]) {
+                        changes.push({
+                            row,
+                            col,
+                            oldColor: beforeState[row][col],
+                            newColor: afterState[row][col]
+                        });
+                    }
+                }
+            }
+            
+            if (changes.length > 0) {
+                // Use PixelAction to maintain compatibility with paint actions
+                const action = new window.JTEdit.History.PixelAction(
+                    changes,
+                    pixelArrayFrames[currentFrameIndex],
+                    currentFrameIndex
+                );
+                action.name = 'Shift Right'; // Override the default name
+                action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
+                historyManager.execute(action);
+            }
+            
             drawPixels();
             updateTextDisplay();
         });
@@ -480,11 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
 
-        // Function to update palette icon color (legacy function - now updates color previews)
-        function updatePaletteIconColor() {
-          // Legacy function now just updates color previews since we have unified color selector
-          updateColorPreviews();
-        }
         
         // Advances to next color on paletteIcon click
         function openColorPicker() {        
@@ -921,6 +1079,199 @@ function loadPixelArrayFromJTFile(data) {
         }
     // --- End Animation functions ---
 
+    // === NEW FEATURE FUNCTIONS ===
+    
+    // History Management Functions
+    function updateHistoryUI(state) {
+        const undoBtn = document.getElementById('undoButton');
+        const redoBtn = document.getElementById('redoButton');
+        const statusSpan = document.getElementById('historyStatus');
+        
+        undoBtn.disabled = !state.canUndo;
+        redoBtn.disabled = !state.canRedo;
+        
+        const undoCount = state.history.undoStack.length;
+        const redoCount = state.history.redoStack.length;
+        statusSpan.textContent = undoCount > 0 ? `${undoCount} actions` : 'No actions';
+    }
+    
+    // Tool Management Functions
+    function initializeToolButtons() {
+        toolButtonsMap = {
+            'paint': document.getElementById('paintTool'),
+            'select-rect': document.getElementById('selectRectTool')
+        };
+        
+        Object.keys(toolButtonsMap).forEach(tool => {
+            toolButtonsMap[tool].addEventListener('click', () => setCurrentTool(tool));
+        });
+        
+        // Initialize undo/redo buttons
+        document.getElementById('undoButton').addEventListener('click', () => {
+            if (historyManager.undo()) {
+                drawPixels();
+                updateTextDisplay();
+            }
+        });
+        
+        document.getElementById('redoButton').addEventListener('click', () => {
+            if (historyManager.redo()) {
+                drawPixels();
+                updateTextDisplay();
+            }
+        });
+        
+    }
+    
+    function setCurrentTool(tool) {
+        // Clear active state from all tools
+        Object.values(toolButtonsMap).forEach(btn => btn.classList.remove('active'));
+        
+        // Set new tool as active
+        if (toolButtonsMap[tool]) {
+            toolButtonsMap[tool].classList.add('active');
+        }
+        
+        currentTool = tool;
+        window.currentTool = tool; // Keep global in sync
+        
+        // Update managers based on tool
+        if (tool.startsWith('select')) {
+            const mode = 'rectangle'; // Only rectangular selection supported
+            selectionManager.setSelectionMode(mode);
+        }
+        
+        // Update UI panels
+        updateToolPanels();
+    }
+    
+    
+    function updateToolPanels() {
+        const selectionPanel = document.getElementById('selectionInfoPanel');
+        
+        if (currentTool.startsWith('select')) {
+            selectionPanel.style.display = 'block';
+        } else {
+            selectionPanel.style.display = 'none';
+        }
+    }
+    
+    // Selection Callback Functions
+    function onSelectionChange(selection) {
+        const sizeSpan = document.getElementById('selectionSize');
+        
+        if (selection && !selection.isEmpty()) {
+            const bounds = selection.getBounds();
+            const width = bounds.maxCol - bounds.minCol + 1;
+            const height = bounds.maxRow - bounds.minRow + 1;
+            sizeSpan.textContent = `${width} × ${height}`;
+        } else {
+            sizeSpan.textContent = 'No selection';
+        }
+    }
+    
+    // Shape Callback Functions
+    
+    // Scaling Callback Functions
+    function onScalingApply(options) {
+        // Apply scaling to current frame or all frames
+        const sourcePixels = pixelArrayFrames[currentFrameIndex];
+        
+        if (currentMode === 'animation') {
+            // Scale all frames
+            const scaledFrames = canvasScaler.scaleFrames(
+                pixelArrayFrames,
+                pixelWidth,
+                pixelHeight,
+                parseInt(selectedSize.split('x')[1]), // target width
+                parseInt(selectedSize.split('x')[0]), // target height
+                options
+            );
+            
+            pixelArrayFrames = scaledFrames;
+        } else {
+            // Scale current frame only
+            const result = canvasScaler.scalePixelArray(
+                sourcePixels,
+                pixelWidth,
+                pixelHeight,
+                parseInt(selectedSize.split('x')[1]), // target width
+                parseInt(selectedSize.split('x')[0]), // target height
+                options
+            );
+            
+            pixelArrayFrames[currentFrameIndex] = result.pixels;
+        }
+        
+        // Update canvas dimensions
+        pixelHeight = parseInt(selectedSize.split('x')[0]);
+        pixelWidth = parseInt(selectedSize.split('x')[1]);
+        
+        drawPixels();
+        updateTextDisplay();
+    }
+    
+    function onScalingCancel() {
+        // User cancelled scaling - revert size dropdown
+        const sizeDropdown = document.getElementById("sizeDropdown");
+        sizeDropdown.value = `${pixelHeight}x${pixelWidth}`;
+    }
+    
+    // Enhanced Pixel Click Handler (make global for access from event handlers)
+    window.handlePixelClick = function handlePixelClick(row, col, event) {
+        if (window.currentTool === 'paint') {
+            // Original paint functionality with history tracking
+            const button = event.button || (event.which - 1);
+            const oldColor = pixelArrayFrames[currentFrameIndex][row][col];
+            const newColor = button === 0 ? selectedColor : rtmouseBtnColor;
+            
+            if (oldColor !== newColor) {
+                const action = new window.JTEdit.History.PixelAction(
+                    [{row, col, oldColor, newColor}],
+                    pixelArrayFrames[currentFrameIndex],
+                    currentFrameIndex
+                );
+                
+                historyManager.execute(action);
+                drawPixels();
+                updateTextDisplay();
+            }
+        } else if (window.currentTool.startsWith('select')) {
+            // Handle selection tools
+            if (event.type === 'mousedown') {
+                window.JTEdit.currentSelectionManager.startSelection(row, col);
+            }
+        }
+    }
+    
+    // Enhanced Size Change Handler with Scaling
+    function enhancedHandleSizeChange() {
+        const sizeDropdown = document.getElementById("sizeDropdown");
+        const selectedSizeNew = sizeDropdown.value;
+        const [newHeight, newWidth] = selectedSizeNew.split("x").map(Number);
+        
+        // Check if there's content to scale
+        const hasContent = pixelArrayFrames.some(frame => 
+            frame.some(row => 
+                row.some(pixel => pixel !== rtmouseBtnColor)
+            )
+        );
+        
+        if (hasContent && (newHeight !== pixelHeight || newWidth !== pixelWidth)) {
+            // Show scaling dialog
+            scalingDialog.show(
+                pixelArrayFrames[currentFrameIndex],
+                pixelWidth,
+                pixelHeight,
+                newWidth,
+                newHeight
+            );
+        } else {
+            // No content, proceed with normal size change
+            handleSizeChange();
+        }
+    }
+
 
     // Initialize the GUI
     // Create first pixel array from selectedSize global var using rtmouseBtnColor background
@@ -930,6 +1281,26 @@ function loadPixelArrayFromJTFile(data) {
     updateColorPickerVisibility(); // Initialize color picker visibility
     updateAutoScaleStatus(); // Initialize auto-scale status indicator
     updateColorPreviews(); // Initialize unified color selector
+    
+    // Initialize new features
+    initializeToolButtons();
+    
+    // Make managers available globally for keyboard shortcuts
+    window.JTEdit.currentSelectionManager = selectionManager;
+    window.JTEdit.currentHistoryManager = historyManager;
+    
+    // Update selection manager pixel size
+    selectionManager.setPixelSize(parseInt(document.getElementById("pixelSizeInput").value));
+    
+    // Override size dropdown handler to use enhanced version
+    document.getElementById("sizeDropdown").removeEventListener("change", handleSizeChange);
+    document.getElementById("sizeDropdown").addEventListener("change", enhancedHandleSizeChange);
+    
+    // Add pixel size input handler to update managers
+    document.getElementById("pixelSizeInput").addEventListener("input", function() {
+        const newPixelSize = parseInt(this.value);
+        selectionManager.setPixelSize(newPixelSize);
+    });
     
     // Apply initial responsive scaling
     applyResponsiveScaling();
@@ -1329,6 +1700,12 @@ function selectBackgroundColor() {
     }
 }
 
+// Function to update palette icon color (legacy function - now updates color previews)
+function updatePaletteIconColor() {
+  // Legacy function now just updates color previews since we have unified color selector
+  updateColorPreviews();
+}
+
 function swapColors() {
     const temp = selectedColor;
     selectedColor = rtmouseBtnColor;
@@ -1337,7 +1714,7 @@ function swapColors() {
     // Update the color picker values
     if (colorFormat === '24bit') {
         document.getElementById("htmlColorPicker").value = selectedColor;
-        document.getElementById("hexColorInput").value = selectedColor.toUpperCase();
+        // hexColorInput doesn't exist in the current UI, skip it
     } else {
         // Update the 3-bit color picker
         const customColorPicker = document.getElementById("customColorPicker");
@@ -1461,10 +1838,28 @@ function swapColors() {
                 pixel.style.backgroundColor = color;                
                 pixel.style.width           = `${pixelSize}px`;
                 pixel.style.height          = `${pixelSize}px`;
+                pixel.setAttribute('data-row', rowIndex);
+                pixel.setAttribute('data-col', columnIndex);
 
-                // Add click event listeners for pixel editing
-                pixel.addEventListener('mousemove', () => {togglePixel(rowIndex, columnIndex)});
-                pixel.addEventListener('mousedown', () => {mousebtn_Gbl=event.button;togglePixel(rowIndex, columnIndex)}); 
+                // Add click event listeners for pixel editing (enhanced for new tools)
+                pixel.addEventListener('mousedown', (event) => {
+                    mousebtn_Gbl = event.button;
+                    window.handlePixelClick(rowIndex, columnIndex, event);
+                });
+                
+                pixel.addEventListener('mousemove', (event) => {
+                    if (window.currentTool === 'paint') {
+                        togglePixel(rowIndex, columnIndex);
+                    } else if (window.currentTool.startsWith('select') && window.JTEdit.currentSelectionManager.isSelecting) {
+                        window.JTEdit.currentSelectionManager.updateSelection(rowIndex, columnIndex);
+                    }
+                });
+                
+                pixel.addEventListener('mouseup', (event) => {
+                    if (window.currentTool.startsWith('select')) {
+                        window.JTEdit.currentSelectionManager.endSelection();
+                    }
+                }); 
 
                 //prevent context menu when using right mouse button
                 //pixel.addEventListener("contextmenu", event => {mousebtn_Gbl=event.button;event.preventDefault();return false;});
