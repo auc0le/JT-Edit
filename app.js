@@ -734,12 +734,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to add color to 3-bit recent colors
         function addTo3BitRecentColors(color) {
+            console.log('Adding to 3-bit recent colors:', color);
             if (!recent3BitColors.includes(color)) {
                 recent3BitColors.unshift(color);
                 if (recent3BitColors.length > 5) {
                     recent3BitColors.pop();
                 }
+                console.log('Updated 3-bit recent colors array:', recent3BitColors);
                 update3BitRecentColorsGrid();
+            } else {
+                console.log('Color already in recent colors:', color);
             }
         }
 
@@ -806,11 +810,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to update 3-bit recent colors grid
         function update3BitRecentColorsGrid() {
+            console.log('Updating 3-bit recent colors grid, colors:', recent3BitColors);
             const grid = document.getElementById("recentColorsGrid");
+            if (!grid) {
+                console.error('Recent colors grid element not found!');
+                return;
+            }
+            
             grid.innerHTML = '';
             
             // Only show populated colors in 3-bit mode (no placeholders)
             recent3BitColors.forEach(color => {
+                console.log('Creating recent color div for:', color);
                 const colorDiv = document.createElement('div');
                 colorDiv.className = 'recent-color';
                 colorDiv.style.backgroundColor = color;
@@ -825,6 +836,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 grid.appendChild(colorDiv);
             });
+            
+            console.log('3-bit recent colors grid updated, total elements:', grid.children.length);
         }
 
     // --- End Event Listeners for GUI ---
