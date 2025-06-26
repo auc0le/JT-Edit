@@ -118,7 +118,7 @@ body::before {
     background: linear-gradient(135deg, var(--color-primary) 0%, #1976D2 100%);
     color: var(--color-white);
     box-shadow: var(--shadow-md);
-    margin-bottom: var(--space-xl);
+    margin-bottom: 0;
     position: relative;
     overflow: hidden;
 }
@@ -315,10 +315,10 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: max(4px, calc(4px * var(--scale-factor)));
-    padding: max(12px, calc(12px * var(--scale-factor)));
+    padding: max(12px, calc(12px * var(--scale-factor))) max(12px, calc(12px * var(--scale-factor))) var(--space-xs) max(12px, calc(12px * var(--scale-factor)));
     background: #f8f9fa;
     border-radius: 3px;
-    margin: 2px auto 15px auto;
+    margin: 0 auto;
     width: fit-content;
     max-width: 100%;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -1641,7 +1641,7 @@ button {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: var(--space-lg) auto;
+    margin: var(--space-xs) auto;
     width: 100%;
 }
 
