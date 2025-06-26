@@ -63,6 +63,8 @@ let redBinaryArray      = [[]];
 let greenBinaryArray    = [[]];
 let blueBinaryArray     = [[]];
 var mousebtn_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
+var isDragging = false;
+var pendingPixelChanges = [];
 
 // global vars for animation logic
 let pixelArrayFrames = [[]];
@@ -171,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Selection Manager
     const selectionManager = new window.JTEdit.SelectionManager(
         canvas,
-        onSelectionChange
+        null // No callback needed
     );
     
     
@@ -841,7 +843,20 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("RMBpaintBucketButton").addEventListener("click", RMBhandlePaintBucket);
     
     //Event listeners for mouse buttons -- allows pixels to be drawn while holding mouse buttons
-    document.addEventListener("mouseup", function(){  mousebtn_Gbl=-1; });
+    document.addEventListener("mouseup", function(){  
+        // If we were dragging, commit the pending pixel changes to history
+        if (isDragging && pendingPixelChanges.length > 0) {
+            const action = new window.JTEdit.History.PixelAction(
+                pendingPixelChanges,
+                pixelArrayFrames[currentFrameIndex],
+                currentFrameIndex
+            );
+            historyManager.execute(action);
+            pendingPixelChanges = [];
+        }
+        isDragging = false;
+        mousebtn_Gbl=-1; 
+    });
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
@@ -885,7 +900,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("swapColorsButton").addEventListener("click", swapColors);
 
     // Selection control event listeners
-    document.getElementById("clearSelectionButton").addEventListener("click", clearSelection);
 
     // Function to open file input
     window.openFileInput = function() {
@@ -1242,43 +1256,20 @@ function loadPixelArrayFromJTFile(data) {
             toolButtonsMap[tool].classList.add('active');
         }
         
-        currentTool = tool;
-        window.currentTool = tool; // Keep global in sync
-        
-        // Update managers based on tool
-        if (tool.startsWith('select')) {
-            // Clear any existing selection when switching to select tool
+        // Clear selection when switching away from select tools
+        if (currentTool && currentTool.startsWith('select') && !tool.startsWith('select')) {
             selectionManager.clear();
         }
         
-        // Update UI panels
-        updateToolPanels();
-    }
-    
-    
-    function updateToolPanels() {
-        const selectionPanel = document.getElementById('selectionInfoPanel');
+        currentTool = tool;
+        window.currentTool = tool; // Keep global in sync
         
-        if (currentTool.startsWith('select')) {
-            selectionPanel.style.display = 'block';
-        } else {
-            selectionPanel.style.display = 'none';
+        // Clear any existing selection when switching to select tool
+        if (tool.startsWith('select')) {
+            selectionManager.clear();
         }
     }
     
-    // Selection Callback Functions
-    function onSelectionChange(selection) {
-        const sizeSpan = document.getElementById('selectionSize');
-        
-        if (selection && !selection.isEmpty()) {
-            const bounds = selection.getBounds();
-            const width = bounds.maxCol - bounds.minCol + 1;
-            const height = bounds.maxRow - bounds.minRow + 1;
-            sizeSpan.textContent = `${width} × ${height}`;
-        } else {
-            sizeSpan.textContent = 'No selection';
-        }
-    }
     
     // Shape Callback Functions
     
@@ -1359,7 +1350,6 @@ function loadPixelArrayFromJTFile(data) {
                 if (selectionManager.hasSelection() && 
                     selectionManager.currentSelection.contains(row, col)) {
                     // Start move operation
-                    console.log('[Pixel] Click within selection, starting move');
                     event.preventDefault();
                     event.stopPropagation();
                     selectionManager.startMove(event);
@@ -1875,12 +1865,6 @@ function swapColors() {
     updatePaletteIconColor();
 }
 
-// Function to clear the current selection
-function clearSelection() {
-    if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-        window.JTEdit.currentSelectionManager.clear();
-    }
-}
 
     // Function to update text display below canvas with RGB data representation
     function updateTextDisplay() {
@@ -2030,14 +2014,32 @@ function clearSelection() {
 
       // Function to draw pixel colors while dragging mouse
         function togglePixel(row, col) {
-            if (mousebtn_Gbl==0){                      //will draw selectedColor when holding left mouse button
-              pixelArray[row][col] = selectedColor;
-              drawPixels();
-              updateTextDisplay();
-            } else if (mousebtn_Gbl==2) {              //will draw rtmouseBtnColor when holding right mouse button
-              pixelArray[row][col] = rtmouseBtnColor;
-              drawPixels();
-              updateTextDisplay();
+            if (mousebtn_Gbl==0 || mousebtn_Gbl==2){
+                const oldColor = pixelArray[row][col];
+                const newColor = mousebtn_Gbl==0 ? selectedColor : rtmouseBtnColor;
+                
+                if (oldColor !== newColor) {
+                    // Mark as dragging and track the change
+                    isDragging = true;
+                    
+                    // Check if we already have a change for this pixel in the current drag
+                    const existingChangeIndex = pendingPixelChanges.findIndex(
+                        change => change.row === row && change.col === col
+                    );
+                    
+                    if (existingChangeIndex >= 0) {
+                        // Update the new color for existing change
+                        pendingPixelChanges[existingChangeIndex].newColor = newColor;
+                    } else {
+                        // Add new pixel change
+                        pendingPixelChanges.push({row, col, oldColor, newColor});
+                    }
+                    
+                    // Apply the change visually
+                    pixelArray[row][col] = newColor;
+                    drawPixels();
+                    updateTextDisplay();
+                }
             }
         }
 

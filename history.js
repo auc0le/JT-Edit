@@ -61,10 +61,10 @@ class PixelAction extends Action {
     }
 
     canMergeWith(otherAction) {
-        // Merge consecutive pixel actions within 500ms
+        // Merge consecutive pixel actions within 100ms (reduced from 500ms for more responsive feel)
         if (!(otherAction instanceof PixelAction)) return false;
         if (this.frameIndex !== otherAction.frameIndex) return false;
-        return (otherAction.timestamp - this.timestamp) < 500;
+        return (otherAction.timestamp - this.timestamp) < 100;
     }
 
     mergeWith(otherAction) {

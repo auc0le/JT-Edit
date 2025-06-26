@@ -232,16 +232,12 @@ class SelectionRenderer {
         
         // Add event listeners for move operations directly to the border
         borderDiv.addEventListener('mousedown', (e) => {
-            console.log('[Selection] Border mousedown event fired');
             e.preventDefault();
             e.stopPropagation();
             
             // Start move operation
             if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-                console.log('[Selection] Calling startMove');
                 window.JTEdit.currentSelectionManager.startMove(e);
-            } else {
-                console.error('[Selection] SelectionManager not found!');
             }
         });
         
@@ -317,6 +313,7 @@ class SelectionManager {
         this.selectionData = null; // Store selection content for moving
         this.originalBounds = null; // Store original selection bounds
         this.moveDelta = { rows: 0, cols: 0 }; // Track cumulative movement
+        this.previewPixels = null; // Store original canvas state for preview
         this.setupLayoutListeners();
         this.setupMoveListeners();
     }
@@ -366,7 +363,6 @@ class SelectionManager {
         // Mouse move for dragging selection or updating selection creation
         document.addEventListener('mousemove', (e) => {
             if (this.isMoving) {
-                console.log('[Move] Document mousemove in move mode');
                 this.updateMove(e);
             } else if (this.isSelecting && window.currentTool && window.currentTool.startsWith('select')) {
                 // Handle selection updates when mouse moves outside pixel elements
@@ -391,18 +387,13 @@ class SelectionManager {
      * Start moving the selection
      */
     startMove(event) {
-        console.log('[Move] startMove called', { hasSelection: this.hasSelection(), isMoving: this.isMoving });
-        if (!this.hasSelection()) {
-            console.log('[Move] No selection, returning');
-            return;
-        }
+        if (!this.hasSelection()) return;
         
         // Stop any ongoing selection creation
         this.isSelecting = false;
         
         this.isMoving = true;
         this.moveStartPos = { x: event.clientX, y: event.clientY };
-        console.log('[Move] Move started at', this.moveStartPos);
         
         // Store selection content and original bounds
         const pixelArray = this.getPixelArrayFromGlobal();
@@ -410,12 +401,20 @@ class SelectionManager {
             this.selectionData = this.getSelectedPixels(pixelArray);
             this.originalBounds = this.currentSelection.getBounds();
             this.moveDelta = { rows: 0, cols: 0 };
-            console.log('[Move] Selection data stored:', {
-                pixelCount: this.selectionData.pixels.length,
-                bounds: this.originalBounds
-            });
-        } else {
-            console.error('[Move] Could not get pixel array!');
+            
+            // Store complete canvas state for preview restoration
+            this.previewPixels = pixelArray.map(row => [...row]);
+            
+            // Clear the original selection area immediately for preview
+            const backgroundColor = this.getBackgroundColor();
+            for (let row = this.originalBounds.minRow; row <= this.originalBounds.maxRow; row++) {
+                for (let col = this.originalBounds.minCol; col <= this.originalBounds.maxCol; col++) {
+                    pixelArray[row][col] = backgroundColor;
+                }
+            }
+            
+            // Initial draw to show cleared area
+            this.redrawCanvas();
         }
         
         // Change cursor for all elements during move
@@ -426,13 +425,7 @@ class SelectionManager {
      * Update selection position during move
      */
     updateMove(event) {
-        if (!this.isMoving || !this.moveStartPos || !this.originalBounds) {
-            if (!this.isMoving && event.buttons === 1) {
-                console.log('[Move] Mouse moving with button down but not in move mode');
-            }
-            return;
-        }
-        console.log('[Move] updateMove called');
+        if (!this.isMoving || !this.moveStartPos || !this.originalBounds) return;
         
         const deltaX = event.clientX - this.moveStartPos.x;
         const deltaY = event.clientY - this.moveStartPos.y;
@@ -443,13 +436,6 @@ class SelectionManager {
         
         const totalDeltaRows = Math.round(deltaY / pixelSizeWithGap);
         const totalDeltaCols = Math.round(deltaX / pixelSizeWithGap);
-        
-        console.log('[Move] Delta calculation:', {
-            deltaX, deltaY,
-            pixelSizeWithGap,
-            totalDeltaRows,
-            totalDeltaCols
-        });
         
         // Calculate new position based on original bounds
         const newMinRow = this.originalBounds.minRow + totalDeltaRows;
@@ -472,105 +458,123 @@ class SelectionManager {
             this.currentSelection.endRow = newMaxRow;
             this.currentSelection.endCol = newMaxCol;
             
+            // Show live preview of pixels in new location
+            this.showMovePreview(newMinRow, newMinCol);
+            
             // Update visual representation
             this.updateRenderer();
         }
     }
 
     /**
+     * Show live preview of moved pixels
+     */
+    showMovePreview(newMinRow, newMinCol) {
+        if (!this.previewPixels || !this.selectionData) return;
+        
+        const pixelArray = this.getPixelArrayFromGlobal();
+        if (!pixelArray) return;
+        
+        // Restore canvas to original state (before move started)
+        for (let row = 0; row < pixelArray.length; row++) {
+            for (let col = 0; col < pixelArray[row].length; col++) {
+                pixelArray[row][col] = this.previewPixels[row][col];
+            }
+        }
+        
+        // Clear the original selection area
+        const backgroundColor = this.getBackgroundColor();
+        for (let row = this.originalBounds.minRow; row <= this.originalBounds.maxRow; row++) {
+            for (let col = this.originalBounds.minCol; col <= this.originalBounds.maxCol; col++) {
+                pixelArray[row][col] = backgroundColor;
+            }
+        }
+        
+        // Place selection pixels at new preview location
+        this.selectionData.pixels.forEach(pixel => {
+            const previewRow = newMinRow + pixel.row;
+            const previewCol = newMinCol + pixel.col;
+            
+            // Ensure we're within bounds
+            if (previewRow >= 0 && previewRow < pixelArray.length &&
+                previewCol >= 0 && previewCol < pixelArray[0].length) {
+                pixelArray[previewRow][previewCol] = pixel.color;
+            }
+        });
+        
+        // Redraw canvas to show preview
+        this.redrawCanvas();
+    }
+
+    /**
      * End the move operation
      */
     endMove(event) {
-        console.log('[Move] endMove called', { isMoving: this.isMoving });
         if (!this.isMoving) return;
         
         this.isMoving = false;
         document.body.style.cursor = '';
         
         // Only perform the move if we actually moved
-        if (this.selectionData && this.originalBounds && 
+        if (this.selectionData && this.originalBounds && this.previewPixels &&
             (this.moveDelta.rows !== 0 || this.moveDelta.cols !== 0)) {
             
             const pixelArray = this.getPixelArrayFromGlobal();
             if (pixelArray) {
-                // Collect all pixel changes for history
+                // Collect all pixel changes for history using original state
                 const changes = [];
-                const backgroundColor = this.getBackgroundColor();
                 
-                // First, clear the original selection area
-                for (let row = this.originalBounds.minRow; row <= this.originalBounds.maxRow; row++) {
-                    for (let col = this.originalBounds.minCol; col <= this.originalBounds.maxCol; col++) {
-                        const oldColor = pixelArray[row][col];
-                        if (oldColor !== backgroundColor) {
+                // Compare final state with original state to build complete change list
+                for (let row = 0; row < pixelArray.length; row++) {
+                    for (let col = 0; col < pixelArray[row].length; col++) {
+                        const originalColor = this.previewPixels[row][col];
+                        const currentColor = pixelArray[row][col];
+                        
+                        if (originalColor !== currentColor) {
                             changes.push({
                                 row: row,
                                 col: col,
-                                oldColor: oldColor,
-                                newColor: backgroundColor
+                                oldColor: originalColor,
+                                newColor: currentColor
                             });
                         }
                     }
                 }
                 
-                // Then, place selection content at new position
-                const newBounds = this.currentSelection.getBounds();
-                console.log('[Move] Moving selection:', {
-                    from: this.originalBounds,
-                    to: newBounds,
-                    delta: this.moveDelta,
-                    pixelCount: this.selectionData.pixels.length
-                });
-                
-                this.selectionData.pixels.forEach(pixel => {
-                    const newRow = newBounds.minRow + pixel.row;
-                    const newCol = newBounds.minCol + pixel.col;
-                    
-                    // Ensure we're within bounds
-                    if (newRow >= 0 && newRow < pixelArray.length &&
-                        newCol >= 0 && newCol < pixelArray[0].length) {
-                        const oldColor = pixelArray[newRow][newCol];
-                        const newColor = pixel.color;
-                        
-                        if (oldColor !== newColor) {
-                            changes.push({
-                                row: newRow,
-                                col: newCol,
-                                oldColor: oldColor,
-                                newColor: newColor
-                            });
-                        }
-                    }
-                });
-                
                 // Create single history action for the entire move operation
-                console.log('[Move] Total changes to apply:', changes.length);
                 if (changes.length > 0 && window.JTEdit && window.JTEdit.currentHistoryManager) {
-                    console.log('[Move] Creating history action');
                     const action = new window.JTEdit.History.PixelAction(
                         changes,
                         pixelArray,
                         currentFrameIndex || 0
                     );
-                    action.name = 'Move Selection';
+                    action.description = 'Move Selection';
                     action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
-                    console.log('[Move] Executing history action');
                     window.JTEdit.currentHistoryManager.execute(action);
-                    console.log('[Move] History action executed');
-                } else if (changes.length === 0) {
-                    console.log('[Move] No changes to apply');
-                } else {
-                    console.error('[Move] History manager not available');
                 }
                 
-                // Redraw canvas with moved selection
+                // Canvas is already showing the final state from preview
+                this.redrawCanvas();
+            }
+        } else if (this.previewPixels) {
+            // If no movement occurred, restore original state
+            const pixelArray = this.getPixelArrayFromGlobal();
+            if (pixelArray) {
+                for (let row = 0; row < pixelArray.length; row++) {
+                    for (let col = 0; col < pixelArray[row].length; col++) {
+                        pixelArray[row][col] = this.previewPixels[row][col];
+                    }
+                }
                 this.redrawCanvas();
             }
         }
         
+        // Clean up preview state
         this.moveStartPos = null;
         this.selectionData = null;
         this.originalBounds = null;
         this.moveDelta = { rows: 0, cols: 0 };
+        this.previewPixels = null;
         
         // Notify about selection change
         if (this.onSelectionChange) {
@@ -683,7 +687,6 @@ class SelectionManager {
 
     endSelection() {
         if (!this.isSelecting) return;
-        console.log('Ending selection');
         this.isSelecting = false;
         this.updateRenderer();
         if (this.onSelectionChange) {
@@ -822,6 +825,7 @@ class SelectionManager {
         document.body.style.cursor = '';
         this.moveStartPos = null;
         this.selectionData = null;
+        this.previewPixels = null;
     }
 }
 
