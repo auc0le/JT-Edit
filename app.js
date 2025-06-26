@@ -1247,8 +1247,8 @@ function loadPixelArrayFromJTFile(data) {
         
         // Update managers based on tool
         if (tool.startsWith('select')) {
-            const mode = 'rectangle'; // Only rectangular selection supported
-            selectionManager.setSelectionMode(mode);
+            // Clear any existing selection when switching to select tool
+            selectionManager.clear();
         }
         
         // Update UI panels
@@ -1354,7 +1354,19 @@ function loadPixelArrayFromJTFile(data) {
         } else if (window.currentTool.startsWith('select')) {
             // Handle selection tools
             if (event.type === 'mousedown') {
-                window.JTEdit.currentSelectionManager.startSelection(row, col);
+                const selectionManager = window.JTEdit.currentSelectionManager;
+                // Check if clicking within existing selection
+                if (selectionManager.hasSelection() && 
+                    selectionManager.currentSelection.contains(row, col)) {
+                    // Start move operation
+                    console.log('[Pixel] Click within selection, starting move');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    selectionManager.startMove(event);
+                    return;
+                }
+                // Start new selection if not clicking on existing one
+                selectionManager.startSelection(row, col);
             }
         }
     }
