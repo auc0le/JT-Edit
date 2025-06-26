@@ -35,10 +35,19 @@ pixelArrayFrames[frameIndex] = pixelArray;  // For animations
 - Animation: `dataType: 0` with `aniData` array and frame info
 
 ### Color System
-3-bit color space (8 colors only):
+JT-Edit supports two color modes:
+
+**3-bit Color Mode** (8 colors only):
 - Binary RGB values map to hex colors
 - '000' = Black, '001' = Red, '010' = Green, etc.
-- Color quantization required for image imports
+- Required for CoolLED1248 LED panel compatibility
+- Color quantization applied to imports and scaling operations
+
+**24-bit Color Mode** (full color):
+- Standard RGB color space with 16.7 million colors
+- Used for general image editing and PNG export
+- No color quantization applied
+- Bilinear scaling preserves full color gradients
 
 ### Important Functions
 - `createPixelArray()` - Initialize pixel grid
@@ -52,13 +61,15 @@ pixelArrayFrames[frameIndex] = pixelArray;  // For animations
 2. **Browser Compatibility**: Must work in modern browsers without transpilation
 3. **Canvas Rendering**: Uses CSS Grid with divs, not HTML5 Canvas API
 4. **File Format**: JT format is proprietary - maintain compatibility with CoolLED1248
-5. **Color Constraints**: Always respect 3-bit color limitation (8 colors max)
+5. **Color Constraints**: Respect current color mode - 3-bit (8 colors) or 24-bit (full color)
 
 ## Testing Approach
 
 Manual testing workflow:
 1. Open index.html in browser
 2. Test all panel sizes (16x32 through 32x192)
-3. Verify import/export of sample files in `sample files/` directory
-4. Test both static and animation modes
-5. Verify exported files work with CoolLED1248 app
+3. Test both 3-bit and 24-bit color modes
+4. Verify import/export of sample files in `sample files/` directory
+5. Test both static and animation modes
+6. Test scaling operations in both color modes
+7. Verify exported files work with CoolLED1248 app

@@ -104,6 +104,7 @@ class EPXScaler extends IScalingAlgorithm {
 /**
  * Bilinear Scaling - Smooth scaling with interpolation
  * Better for photographic content
+ * Note: Creates interpolated colors, respects current color mode for quantization
  */
 class BilinearScaler extends IScalingAlgorithm {
     scale(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight) {
@@ -149,7 +150,9 @@ class BilinearScaler extends IScalingAlgorithm {
                     c11.b * wx * wy
                 );
                 
-                targetPixels[y][x] = this.rgbToHex(r, g, b);
+                const hexColor = this.rgbToHex(r, g, b);
+                // Only quantize to 3-bit if the application is in 3-bit mode
+                targetPixels[y][x] = (window.colorFormat === '3bit') ? this.quantizeToThreeBit(hexColor) : hexColor;
             }
         }
         
@@ -167,6 +170,42 @@ class BilinearScaler extends IScalingAlgorithm {
     
     rgbToHex(r, g, b) {
         return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+    
+    quantizeToThreeBit(hexColor) {
+        // Convert hex to RGB
+        const rgb = this.hexToRgb(hexColor);
+        
+        // Define the 8 allowed colors in 3-bit color space
+        const colors = [
+            [255, 0, 0],   // Red
+            [0, 255, 0],   // Green
+            [0, 0, 255],   // Blue
+            [255, 255, 0], // Yellow
+            [255, 0, 255], // Magenta
+            [0, 255, 255], // Cyan
+            [255, 255, 255], // White
+            [0, 0, 0]      // Black
+        ];
+        
+        // Find the nearest color using Euclidean distance
+        const nearestColor = colors.reduce((nearest, color) => {
+            const distance = Math.sqrt(
+                Math.pow(rgb.r - color[0], 2) +
+                Math.pow(rgb.g - color[1], 2) +
+                Math.pow(rgb.b - color[2], 2)
+            );
+            
+            return distance < nearest.distance ? {
+                color,
+                distance
+            } : nearest;
+        }, {
+            color: null,
+            distance: Infinity
+        }).color;
+        
+        return this.rgbToHex(...nearestColor);
     }
 }
 
@@ -321,7 +360,7 @@ class CanvasScaler {
         return scaledFrames;
     }
     
-    generatePreview(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, algorithm = 'nearest') {
+    generatePreview(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, algorithm = 'nearest', options = {}) {
         // Generate a smaller preview for performance
         const previewScale = 0.5;
         const previewWidth = Math.max(1, Math.round(targetWidth * previewScale));
@@ -333,7 +372,11 @@ class CanvasScaler {
             sourceHeight,
             previewWidth,
             previewHeight,
-            { algorithm }
+            { 
+                algorithm,
+                positioning: options.positioning || 'center',
+                backgroundColor: options.backgroundColor || this.defaultBackgroundColor
+            }
         );
         
         return {
@@ -473,7 +516,11 @@ class ScalingPreviewDialog {
             this.sourceHeight,
             this.targetWidth,
             this.targetHeight,
-            algorithm
+            algorithm,
+            {
+                positioning: position,
+                backgroundColor: backgroundColor
+            }
         );
         
         this.currentPreview = {

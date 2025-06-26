@@ -1278,14 +1278,19 @@ function loadPixelArrayFromJTFile(data) {
         // Apply scaling to current frame or all frames
         const sourcePixels = pixelArrayFrames[currentFrameIndex];
         
+        // Get the current target dimensions from the size dropdown
+        const sizeDropdown = document.getElementById("sizeDropdown");
+        const selectedSizeNew = sizeDropdown.value;
+        const [newHeight, newWidth] = selectedSizeNew.split("x").map(Number);
+        
         if (currentMode === 'animation') {
             // Scale all frames
             const scaledFrames = canvasScaler.scaleFrames(
                 pixelArrayFrames,
                 pixelWidth,
                 pixelHeight,
-                parseInt(selectedSize.split('x')[1]), // target width
-                parseInt(selectedSize.split('x')[0]), // target height
+                newWidth,  // Use consistent newWidth
+                newHeight, // Use consistent newHeight
                 options
             );
             
@@ -1296,8 +1301,8 @@ function loadPixelArrayFromJTFile(data) {
                 sourcePixels,
                 pixelWidth,
                 pixelHeight,
-                parseInt(selectedSize.split('x')[1]), // target width
-                parseInt(selectedSize.split('x')[0]), // target height
+                newWidth,  // Use consistent newWidth
+                newHeight, // Use consistent newHeight
                 options
             );
             
@@ -1305,8 +1310,8 @@ function loadPixelArrayFromJTFile(data) {
         }
         
         // Update canvas dimensions
-        pixelHeight = parseInt(selectedSize.split('x')[0]);
-        pixelWidth = parseInt(selectedSize.split('x')[1]);
+        pixelHeight = newHeight;
+        pixelWidth = newWidth;
         
         // Invalidate selection positioning cache after scaling
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
@@ -1973,9 +1978,17 @@ function swapColors() {
         // Calculate the width of each pixel based on the container size and array width
         const containerWidth = document.getElementById("pixelCanvasContainer").offsetWidth;
 
-        pixelCanvas.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
-
         pixelArray = pixelArrayFrames[currentFrameIndex];
+        
+        // Get actual dimensions from the pixel array, not just the dropdown
+        const actualHeight = pixelArray ? pixelArray.length : height;
+        const actualWidth = pixelArray && pixelArray.length > 0 ? pixelArray[0].length : width;
+        
+        // Update global variables to match actual array dimensions
+        pixelHeight = actualHeight;
+        pixelWidth = actualWidth;
+        
+        pixelCanvas.style.gridTemplateColumns = `repeat(${actualWidth}, ${pixelSize}px)`;
 
         pixelArray.forEach((row, rowIndex) => {
             row.forEach((color, columnIndex) => {
