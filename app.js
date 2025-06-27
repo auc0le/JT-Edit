@@ -1314,6 +1314,12 @@ function loadPixelArrayFromJTFile(data) {
         pixelHeight = newHeight;
         pixelWidth = newWidth;
         
+        // Update pixel size input max based on new canvas size
+        updatePixelSizeInputMax();
+        
+        // Apply responsive scaling to fit the new canvas on screen
+        applyResponsiveScaling();
+        
         // Invalidate selection positioning cache after scaling
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
             window.JTEdit.currentSelectionManager.onLayoutChange();

@@ -278,52 +278,147 @@ class CanvasScaler {
         };
     }
     
+    calculatePositionOffsets(positioning, sourceWidth, sourceHeight, targetWidth, targetHeight, scaledWidth, scaledHeight) {
+        let offsetX = 0;
+        let offsetY = 0;
+        
+        // Handle the case where we're scaling down (cropping)
+        const isDownscaling = sourceWidth > targetWidth || sourceHeight > targetHeight;
+        
+        if (isDownscaling) {
+            // For downscaling, we need to determine which part of the source to keep
+            const scaleX = targetWidth / sourceWidth;
+            const scaleY = targetHeight / sourceHeight;
+            const scale = Math.max(scaleX, scaleY); // Use max to fill the target
+            
+            const scaledW = Math.round(sourceWidth * scale);
+            const scaledH = Math.round(sourceHeight * scale);
+            
+            // Calculate crop offsets based on position
+            if (positioning.horizontal === 'left') {
+                offsetX = 0;
+            } else if (positioning.horizontal === 'middle') {
+                offsetX = Math.floor((scaledW - targetWidth) / 2);
+            } else if (positioning.horizontal === 'right') {
+                offsetX = scaledW - targetWidth;
+            }
+            
+            if (positioning.vertical === 'top') {
+                offsetY = 0;
+            } else if (positioning.vertical === 'center') {
+                offsetY = Math.floor((scaledH - targetHeight) / 2);
+            } else if (positioning.vertical === 'bottom') {
+                offsetY = scaledH - targetHeight;
+            }
+            
+            return { offsetX: -offsetX, offsetY: -offsetY, cropMode: true };
+        } else {
+            // For upscaling, position the smaller image within the larger canvas
+            if (positioning.horizontal === 'left') {
+                offsetX = 0;
+            } else if (positioning.horizontal === 'middle') {
+                offsetX = Math.floor((targetWidth - scaledWidth) / 2);
+            } else if (positioning.horizontal === 'right') {
+                offsetX = targetWidth - scaledWidth;
+            }
+            
+            if (positioning.vertical === 'top') {
+                offsetY = 0;
+            } else if (positioning.vertical === 'center') {
+                offsetY = Math.floor((targetHeight - scaledHeight) / 2);
+            } else if (positioning.vertical === 'bottom') {
+                offsetY = targetHeight - scaledHeight;
+            }
+            
+            return { offsetX, offsetY, cropMode: false };
+        }
+    }
+    
     scalePixelArray(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, options = {}) {
         const algorithm = options.algorithm || this.defaultAlgorithm;
         const backgroundColor = options.backgroundColor || this.defaultBackgroundColor;
-        const positioning = options.positioning || 'center'; // 'center', 'top-left', 'stretch'
+        const positioning = options.positioning || { vertical: 'center', horizontal: 'middle' };
         
         const scaler = this.strategy.getAlgorithm(algorithm);
         const info = this.calculateScaleInfo(sourceWidth, sourceHeight, targetWidth, targetHeight);
         
         let scaledPixels;
         
-        if (positioning === 'stretch' || info.aspectRatioMatch) {
+        if (positioning === 'stretch') {
             // Direct scaling to target size
             scaledPixels = scaler.scale(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight);
         } else {
-            // Scale to fit, then center
-            const { centeredSize } = info;
-            scaledPixels = scaler.scale(
-                sourcePixels, 
-                sourceWidth, 
-                sourceHeight, 
-                centeredSize.width, 
-                centeredSize.height
-            );
+            // Handle positioned scaling
+            const isDownscaling = sourceWidth > targetWidth || sourceHeight > targetHeight;
             
-            // Create final canvas with background
-            const finalPixels = Array(targetHeight).fill(null).map(() => 
-                Array(targetWidth).fill(backgroundColor)
-            );
-            
-            // Copy scaled pixels to center
-            const startY = positioning === 'top-left' ? 0 : info.offsetY;
-            const startX = positioning === 'top-left' ? 0 : info.offsetX;
-            
-            for (let y = 0; y < centeredSize.height; y++) {
-                for (let x = 0; x < centeredSize.width; x++) {
-                    const targetY = startY + y;
-                    const targetX = startX + x;
-                    
-                    if (targetY >= 0 && targetY < targetHeight && 
-                        targetX >= 0 && targetX < targetWidth) {
-                        finalPixels[targetY][targetX] = scaledPixels[y][x];
+            if (isDownscaling) {
+                // For downscaling with cropping
+                const scaleX = targetWidth / sourceWidth;
+                const scaleY = targetHeight / sourceHeight;
+                const scale = Math.max(scaleX, scaleY); // Use max to fill the target
+                
+                const scaledW = Math.round(sourceWidth * scale);
+                const scaledH = Math.round(sourceHeight * scale);
+                
+                // First scale the image
+                const tempScaled = scaler.scale(sourcePixels, sourceWidth, sourceHeight, scaledW, scaledH);
+                
+                // Calculate crop offsets
+                const { offsetX, offsetY } = this.calculatePositionOffsets(
+                    positioning, sourceWidth, sourceHeight, targetWidth, targetHeight, scaledW, scaledH
+                );
+                
+                // Create final cropped image
+                scaledPixels = Array(targetHeight).fill(null).map(() => Array(targetWidth).fill(backgroundColor));
+                
+                const startX = -offsetX;
+                const startY = -offsetY;
+                
+                for (let y = 0; y < targetHeight; y++) {
+                    for (let x = 0; x < targetWidth; x++) {
+                        const sourceY = startY + y;
+                        const sourceX = startX + x;
+                        
+                        if (sourceY >= 0 && sourceY < scaledH && sourceX >= 0 && sourceX < scaledW) {
+                            scaledPixels[y][x] = tempScaled[sourceY][sourceX];
+                        }
+                    }
+                }
+            } else {
+                // For upscaling with positioning
+                const { centeredSize } = info;
+                const tempScaled = scaler.scale(
+                    sourcePixels, 
+                    sourceWidth, 
+                    sourceHeight, 
+                    centeredSize.width, 
+                    centeredSize.height
+                );
+                
+                // Create final canvas with background
+                scaledPixels = Array(targetHeight).fill(null).map(() => 
+                    Array(targetWidth).fill(backgroundColor)
+                );
+                
+                // Calculate position offsets
+                const { offsetX, offsetY } = this.calculatePositionOffsets(
+                    positioning, sourceWidth, sourceHeight, targetWidth, targetHeight, 
+                    centeredSize.width, centeredSize.height
+                );
+                
+                // Copy scaled pixels to position
+                for (let y = 0; y < centeredSize.height; y++) {
+                    for (let x = 0; x < centeredSize.width; x++) {
+                        const targetY = offsetY + y;
+                        const targetX = offsetX + x;
+                        
+                        if (targetY >= 0 && targetY < targetHeight && 
+                            targetX >= 0 && targetX < targetWidth) {
+                            scaledPixels[targetY][targetX] = tempScaled[y][x];
+                        }
                     }
                 }
             }
-            
-            scaledPixels = finalPixels;
         }
         
         return {
@@ -374,7 +469,7 @@ class CanvasScaler {
             previewHeight,
             { 
                 algorithm,
-                positioning: options.positioning || 'center',
+                positioning: options.positioning || { vertical: 'center', horizontal: 'middle' },
                 backgroundColor: options.backgroundColor || this.defaultBackgroundColor
             }
         );
@@ -425,17 +520,36 @@ class ScalingPreviewDialog {
                         </div>
                         
                         <div class="option-group">
-                            <label for="scalingPosition">Positioning:</label>
-                            <select id="scalingPosition" class="control-input">
-                                <option value="center">Center</option>
-                                <option value="top-left">Top-Left</option>
-                                <option value="stretch">Stretch to Fit</option>
+                            <label for="scalingResizeMode">Resize Mode:</label>
+                            <select id="scalingResizeMode" class="control-input">
+                                <option value="stretch" selected>Stretch to Fit</option>
+                                <option value="keep-size">Keep Size</option>
                             </select>
                         </div>
                         
                         <div class="option-group">
                             <label for="scalingBackground">Background Color:</label>
                             <input type="color" id="scalingBackground" value="#000000" class="control-input">
+                        </div>
+                    </div>
+                    
+                    <div class="position-controls" style="display: none;">
+                        <div class="option-group position-group" id="verticalPositionGroup">
+                            <label for="scalingVerticalPosition">Vertical Position:</label>
+                            <select id="scalingVerticalPosition" class="control-input">
+                                <option value="top">Top</option>
+                                <option value="center" selected>Center</option>
+                                <option value="bottom">Bottom</option>
+                            </select>
+                        </div>
+                        
+                        <div class="option-group position-group" id="horizontalPositionGroup">
+                            <label for="scalingHorizontalPosition">Horizontal Position:</label>
+                            <select id="scalingHorizontalPosition" class="control-input">
+                                <option value="left">Left</option>
+                                <option value="middle" selected>Middle</option>
+                                <option value="right">Right</option>
+                            </select>
                         </div>
                     </div>
                     
@@ -467,14 +581,22 @@ class ScalingPreviewDialog {
     
     bindEvents() {
         const algorithmSelect = this.dialog.querySelector('#scalingAlgorithm');
-        const positionSelect = this.dialog.querySelector('#scalingPosition');
+        const resizeModeSelect = this.dialog.querySelector('#scalingResizeMode');
+        const verticalPositionSelect = this.dialog.querySelector('#scalingVerticalPosition');
+        const horizontalPositionSelect = this.dialog.querySelector('#scalingHorizontalPosition');
         const backgroundInput = this.dialog.querySelector('#scalingBackground');
         const applyBtn = this.dialog.querySelector('#applyScaling');
         const cancelBtn = this.dialog.querySelector('#cancelScaling');
         const closeBtn = this.dialog.querySelector('#closeScalingDialog');
         
+        // Event handlers for preview updates
         algorithmSelect.addEventListener('change', () => this.updatePreview());
-        positionSelect.addEventListener('change', () => this.updatePreview());
+        resizeModeSelect.addEventListener('change', () => {
+            this.updatePositionVisibility();
+            this.updatePreview();
+        });
+        verticalPositionSelect.addEventListener('change', () => this.updatePreview());
+        horizontalPositionSelect.addEventListener('change', () => this.updatePreview());
         backgroundInput.addEventListener('change', () => this.updatePreview());
         
         applyBtn.addEventListener('click', () => this.handleApply());
@@ -489,6 +611,17 @@ class ScalingPreviewDialog {
         });
     }
     
+    updatePositionVisibility() {
+        const resizeMode = this.dialog.querySelector('#scalingResizeMode').value;
+        const positionControls = this.dialog.querySelector('.position-controls');
+        
+        if (resizeMode === 'stretch') {
+            positionControls.style.display = 'none';
+        } else {
+            positionControls.style.display = 'flex';
+        }
+    }
+    
     show(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight) {
         this.sourcePixels = sourcePixels;
         this.sourceWidth = sourceWidth;
@@ -497,6 +630,7 @@ class ScalingPreviewDialog {
         this.targetHeight = targetHeight;
         
         this.dialog.classList.add('modal--open');
+        this.updatePositionVisibility();
         this.updatePreview();
         this.renderBeforePreview();
     }
@@ -507,8 +641,22 @@ class ScalingPreviewDialog {
     
     updatePreview() {
         const algorithm = this.dialog.querySelector('#scalingAlgorithm').value;
-        const position = this.dialog.querySelector('#scalingPosition').value;
+        const resizeMode = this.dialog.querySelector('#scalingResizeMode').value;
+        const verticalPosition = this.dialog.querySelector('#scalingVerticalPosition').value;
+        const horizontalPosition = this.dialog.querySelector('#scalingHorizontalPosition').value;
         const backgroundColor = this.dialog.querySelector('#scalingBackground').value;
+        
+        // Determine positioning value based on resize mode
+        let positioning;
+        if (resizeMode === 'stretch') {
+            positioning = 'stretch';
+        } else {
+            // Combine vertical and horizontal positions
+            positioning = {
+                vertical: verticalPosition,
+                horizontal: horizontalPosition
+            };
+        }
         
         const preview = this.scaler.generatePreview(
             this.sourcePixels,
@@ -518,14 +666,14 @@ class ScalingPreviewDialog {
             this.targetHeight,
             algorithm,
             {
-                positioning: position,
+                positioning: positioning,
                 backgroundColor: backgroundColor
             }
         );
         
         this.currentPreview = {
             algorithm,
-            positioning: position,
+            positioning: positioning,
             backgroundColor
         };
         

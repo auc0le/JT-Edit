@@ -1558,6 +1558,34 @@ input:checked + .toggle-slider:hover {
     color: var(--color-gray-600);
 }
 
+/* Position Controls Layout */
+.position-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.position-controls .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.position-controls .option-group label {
+    font-weight: 600;
+    color: var(--color-gray-700);
+    font-size: var(--font-sm);
+}
+
+.position-controls .control-input {
+    width: 100%;
+}
+
 /* Tool Selection Styles */
 .tool-selection-group {
     display: flex;
