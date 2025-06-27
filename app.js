@@ -893,6 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("zoomOutButton").addEventListener("click", zoomOut);
     document.getElementById("fitToScreenButton").addEventListener("click", fitToScreen);
     document.getElementById("autoScaleToggle").addEventListener("change", toggleAutoScale);
+    document.getElementById("gridToggle").addEventListener("change", toggleGrid);
 
     // Unified color selector event listeners
     document.getElementById("foregroundColorPreview").addEventListener("click", selectForegroundColor);
@@ -1406,8 +1407,8 @@ function loadPixelArrayFromJTFile(data) {
     updatePaletteIconColor();
     handleModeChange();
     updateColorPickerVisibility(); // Initialize color picker visibility
-    updateAutoScaleStatus(); // Initialize auto-scale status indicator
     updateColorPreviews(); // Initialize unified color selector
+    initializeGrid(); // Initialize grid toggle state
     
     // Initialize new features
     initializeToolButtons();
@@ -1748,7 +1749,6 @@ function zoomIn() {
     if (newSize !== currentSize) {
         autoScaling = false;
         document.getElementById("autoScaleToggle").checked = false;
-        updateAutoScaleStatus();
         pixelSizeInput.value = newSize;
         
         // Invalidate selection cache when zoom changes
@@ -1768,7 +1768,6 @@ function zoomOut() {
     if (newSize !== currentSize) {
         autoScaling = false;
         document.getElementById("autoScaleToggle").checked = false;
-        updateAutoScaleStatus();
         pixelSizeInput.value = newSize;
         
         // Invalidate selection cache when zoom changes
@@ -1784,23 +1783,40 @@ function toggleAutoScale() {
     const autoScaleToggle = document.getElementById("autoScaleToggle");
     autoScaling = autoScaleToggle.checked;
     
-    updateAutoScaleStatus();
-    
     if (autoScaling) {
         applyResponsiveScaling();
     }
 }
 
-function updateAutoScaleStatus() {
-    const statusElement = document.getElementById("autoScaleStatus");
-    if (autoScaling) {
-        statusElement.textContent = "ON";
-        statusElement.className = "scale-status on tooltip";
-        statusElement.setAttribute("data-tooltip", "Auto scaling is currently enabled - pixel size adjusts automatically based on screen size");
+
+// --- Grid Toggle Functions --- //
+let gridEnabled = localStorage.getItem('gridEnabled') !== 'false'; // Default to true
+
+function toggleGrid() {
+    const gridToggle = document.getElementById("gridToggle");
+    const pixelCanvas = document.getElementById("pixelCanvas");
+    
+    gridEnabled = gridToggle.checked;
+    
+    if (gridEnabled) {
+        pixelCanvas.classList.remove('no-grid');
     } else {
-        statusElement.textContent = "OFF";
-        statusElement.className = "scale-status off tooltip";
-        statusElement.setAttribute("data-tooltip", "Auto scaling is disabled - use zoom controls or pixel size input to adjust manually");
+        pixelCanvas.classList.add('no-grid');
+    }
+    
+    // Save preference to localStorage
+    localStorage.setItem('gridEnabled', gridEnabled);
+}
+
+function initializeGrid() {
+    const gridToggle = document.getElementById("gridToggle");
+    const pixelCanvas = document.getElementById("pixelCanvas");
+    
+    // Set initial state from localStorage
+    gridToggle.checked = gridEnabled;
+    
+    if (!gridEnabled) {
+        pixelCanvas.classList.add('no-grid');
     }
 }
 

@@ -227,6 +227,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    shortcuts.register('g', () => {
+        const gridToggle = document.getElementById('gridToggle');
+        if (gridToggle) {
+            gridToggle.checked = !gridToggle.checked;
+            gridToggle.dispatchEvent(new Event('change'));
+        }
+    });
+    
     // Mode switching
     shortcuts.register('ctrl+m', () => {
         const modeDropdown = document.getElementById('modeDropdown');

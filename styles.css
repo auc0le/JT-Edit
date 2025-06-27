@@ -961,6 +961,93 @@ button {
     min-width: 3ch;
 }
 
+/* ===== TOGGLE SWITCH COMPONENT ===== */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+/* Hover effect */
+.toggle-slider:hover {
+    background-color: #b3b3b3;
+}
+
+input:checked + .toggle-slider:hover {
+    background-color: #45a049;
+}
+
+/* Focus state for accessibility */
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px var(--color-focus);
+}
+
+/* Compact version for toolbar */
+.toggle-switch.compact {
+    width: 36px;
+    height: 20px;
+    margin-left: 4px;
+}
+
+.toggle-switch.compact .toggle-slider:before {
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+}
+
+.toggle-switch.compact input:checked + .toggle-slider:before {
+    transform: translateX(16px);
+}
+
+/* Label adjustments when using toggle switches */
+.checkbox-label > span:first-child {
+    min-width: 30px;
+    font-weight: 500;
+}
+
 /* ===== UTILITY CLASSES ===== */
 .hidden {
     display: none !important;
@@ -1006,6 +1093,10 @@ button {
     padding: 0 15px;
     margin-bottom: 10px;
     width: fit-content;
+}
+
+#pixelCanvas.no-grid {
+    gap: 0;
 }
 
 #textDisplay {
@@ -1206,7 +1297,7 @@ button {
 .checkbox-label {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 6px;
     font-size: 11px;
     color: #666;
 }
@@ -1228,23 +1319,6 @@ button {
     margin: 0;
 }
 
-.scale-status {
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    margin-left: 4px;
-}
-
-.scale-status.on {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.scale-status.off {
-    background-color: #f44336;
-    color: white;
-}
 
 #zoomInButton, #zoomOutButton, #fitToScreenButton {
     background-color: #f0f0f0;
@@ -1979,35 +2053,6 @@ button {
     margin-bottom: calc(var(--space-xs) + 2px);
 }
 
-/* Special positioning for status indicators */
-.scale-status.tooltip::after {
-    bottom: auto;
-    top: 100%;
-    margin-bottom: 0;
-    margin-top: 8px;
-}
-
-.scale-status.tooltip::before {
-    bottom: auto;
-    top: 100%;
-    margin-bottom: 0;
-    margin-top: 2px;
-    border: 4px solid transparent;
-    border-bottom-color: rgba(0, 0, 0, 0.9);
-    border-top-color: transparent;
-}
-
-.scale-status.tooltip:hover::after,
-.scale-status.tooltip:focus::after {
-    margin-top: calc(var(--space-xs) + 2px);
-    margin-bottom: 0;
-}
-
-.scale-status.tooltip:hover::before,
-.scale-status.tooltip:focus::before {
-    margin-top: calc(var(--space-xs) + 2px);
-    margin-bottom: 0;
-}
 
 /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
 @media (prefers-reduced-motion: reduce) {

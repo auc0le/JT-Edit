@@ -111,10 +111,22 @@
                         </div>
                         <div class="control-pair">
                             <label id="autoScaleLabel" class="checkbox-label tooltip" data-tooltip="Automatically adjusts pixel size to fit your screen for optimal viewing">
-                                <input type="checkbox" id="autoScaleToggle" checked aria-describedby="autoScaleDescription"> Auto
-                                <span id="autoScaleStatus" class="scale-status tooltip" data-tooltip="Auto scaling is currently enabled - pixel size adjusts automatically">ON</span>
+                                <span>Auto</span>
+                                <label class="toggle-switch compact">
+                                    <input type="checkbox" id="autoScaleToggle" checked aria-describedby="autoScaleDescription">
+                                    <span class="toggle-slider"></span>
+                                </label>
                             </label>
                             <div id="autoScaleDescription" class="sr-only">When enabled, automatically adjusts pixel size based on canvas dimensions and screen size for optimal viewing experience</div>
+                        </div>
+                        <div class="control-pair">
+                            <label class="checkbox-label tooltip" data-tooltip="Toggle the grid lines between pixels">
+                                <span>Grid</span>
+                                <label class="toggle-switch compact">
+                                    <input type="checkbox" id="gridToggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -397,6 +409,10 @@
                                 <div class="shortcut-item">
                                     <span class="shortcut-key">F</span>
                                     <span class="shortcut-desc">Fit to screen</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">G</span>
+                                    <span class="shortcut-desc">Toggle grid lines</span>
                                 </div>
                                 <div class="shortcut-item">
                                     <span class="shortcut-key">Ctrl+Shift+A</span>

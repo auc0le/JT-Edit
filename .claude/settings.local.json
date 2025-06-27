@@ -5,7 +5,9 @@
       "Bash(find:*)",
       "Bash(rg:*)",
       "Bash(jq:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(start index.html)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }
