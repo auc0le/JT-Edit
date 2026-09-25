@@ -503,7 +503,10 @@ class ScalingPreviewDialog {
         this.dialog.innerHTML = `
             <div class="modal__content scaling-dialog__content">
                 <div class="modal__header">
-                    <h2 class="modal__title">Scale Canvas</h2>
+                    <div>
+                        <h2 class="modal__title">Resize canvas</h2>
+                        <p class="modal__subtitle">Change the panel size and choose how the existing pixels are mapped.</p>
+                    </div>
                     <button class="btn btn--icon-sm" id="closeScalingDialog" aria-label="Close">
                         <i class="fas fa-times"></i>
                     </button>
@@ -511,31 +514,35 @@ class ScalingPreviewDialog {
                 <div class="modal__body">
                     <div class="scaling-options">
                         <div class="option-group">
-                            <label for="scalingAlgorithm">Scaling Algorithm:</label>
+                            <label for="scalingTargetSize">New size</label>
+                            <select id="scalingTargetSize" class="control-input"></select>
+                        </div>
+                        <div class="option-group">
+                            <label for="scalingAlgorithm">Method</label>
                             <select id="scalingAlgorithm" class="control-input">
-                                <option value="nearest">Nearest Neighbor (Pixel Art)</option>
-                                <option value="epx">EPX (Enhanced Pixel Art)</option>
-                                <option value="bilinear">Bilinear (Smooth)</option>
+                                <option value="nearest">Nearest neighbour (crisp)</option>
+                                <option value="epx">EPX (smooth diagonals)</option>
+                                <option value="bilinear">Bilinear (blend, 24-bit)</option>
                             </select>
                         </div>
                         
                         <div class="option-group">
-                            <label for="scalingResizeMode">Resize Mode:</label>
+                            <label for="scalingResizeMode">Fit</label>
                             <select id="scalingResizeMode" class="control-input">
-                                <option value="stretch" selected>Stretch to Fit</option>
-                                <option value="keep-size">Keep Size</option>
+                                <option value="stretch" selected>Stretch to fit</option>
+                                <option value="keep-size">Keep pixel size</option>
                             </select>
                         </div>
                         
                         <div class="option-group">
-                            <label for="scalingBackground">Background Color:</label>
+                            <label for="scalingBackground">Fill new area</label>
                             <input type="color" id="scalingBackground" value="#000000" class="control-input">
                         </div>
                     </div>
                     
                     <div class="position-controls" style="display: none;">
                         <div class="option-group position-group" id="verticalPositionGroup">
-                            <label for="scalingVerticalPosition">Vertical Position:</label>
+                            <label for="scalingVerticalPosition">Vertical anchor</label>
                             <select id="scalingVerticalPosition" class="control-input">
                                 <option value="top">Top</option>
                                 <option value="center" selected>Center</option>
@@ -544,7 +551,7 @@ class ScalingPreviewDialog {
                         </div>
                         
                         <div class="option-group position-group" id="horizontalPositionGroup">
-                            <label for="scalingHorizontalPosition">Horizontal Position:</label>
+                            <label for="scalingHorizontalPosition">Horizontal anchor</label>
                             <select id="scalingHorizontalPosition" class="control-input">
                                 <option value="left">Left</option>
                                 <option value="middle" selected>Middle</option>
@@ -569,8 +576,9 @@ class ScalingPreviewDialog {
                     </div>
                 </div>
                 <div class="modal__footer">
+                    <span class="footer-note">Ctrl+Z undoes nothing here yet: resizing replaces the canvas.</span>
                     <button id="cancelScaling" class="btn btn--secondary">Cancel</button>
-                    <button id="applyScaling" class="btn btn--primary">Apply Scaling</button>
+                    <button id="applyScaling" class="btn btn--primary">Resize</button>
                 </div>
             </div>
         `;
@@ -585,7 +593,16 @@ class ScalingPreviewDialog {
         const verticalPositionSelect = this.dialog.querySelector('#scalingVerticalPosition');
         const horizontalPositionSelect = this.dialog.querySelector('#scalingHorizontalPosition');
         const backgroundInput = this.dialog.querySelector('#scalingBackground');
+        const targetSizeSelect = this.dialog.querySelector('#scalingTargetSize');
         const applyBtn = this.dialog.querySelector('#applyScaling');
+
+        // Target size chosen inside the dialog
+        targetSizeSelect.addEventListener('change', () => {
+            const [h, w] = targetSizeSelect.value.split('x').map(Number);
+            this.targetWidth = w;
+            this.targetHeight = h;
+            this.updatePreview();
+        });
         const cancelBtn = this.dialog.querySelector('#cancelScaling');
         const closeBtn = this.dialog.querySelector('#closeScalingDialog');
         
@@ -628,6 +645,7 @@ class ScalingPreviewDialog {
         this.sourceHeight = sourceHeight;
         this.targetWidth = targetWidth;
         this.targetHeight = targetHeight;
+        this.populateTargetSizes();
         
         this.dialog.classList.add('modal--open');
         this.updatePositionVisibility();
@@ -637,6 +655,23 @@ class ScalingPreviewDialog {
     
     hide() {
         this.dialog.classList.remove('modal--open');
+    }
+
+    // Mirror the panel-size presets from the main size dropdown into the dialog
+    populateTargetSizes() {
+        const select = this.dialog.querySelector('#scalingTargetSize');
+        const source = document.getElementById('sizeDropdown');
+        select.innerHTML = '';
+        const presets = source
+            ? Array.from(source.options).map(o => ({ value: o.value, label: o.textContent.trim() }))
+            : [{ value: `${this.targetHeight}x${this.targetWidth}`, label: `${this.targetHeight} × ${this.targetWidth}` }];
+        presets.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.value;
+            opt.textContent = p.label;
+            select.appendChild(opt);
+        });
+        select.value = `${this.targetHeight}x${this.targetWidth}`;
     }
     
     updatePreview() {
@@ -674,7 +709,9 @@ class ScalingPreviewDialog {
         this.currentPreview = {
             algorithm,
             positioning: positioning,
-            backgroundColor
+            backgroundColor,
+            targetWidth: this.targetWidth,
+            targetHeight: this.targetHeight
         };
         
         this.renderAfterPreview(preview);
@@ -752,4 +789,4 @@ window.JTEdit.Scaling = {
     CanvasScaler,
     ScalingPreviewDialog,
     ScalingStrategy
-};
+};

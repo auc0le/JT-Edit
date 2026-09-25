@@ -12,9 +12,6 @@ var animationFileName   = "coolLED_ani.png";   //base save filename for animatio
 var debug_GBL=false;                           //set to false to disable the debug_init() function
 var autoScaling=true;                          //enable automatic responsive pixel scaling
 
-//globals for swap frames dialog
-var diag_idx1=1;                               
-var diag_idx2=2;
 
 // Screen breakpoints for responsive scaling
 const SCREEN_BREAKPOINTS = {
@@ -26,12 +23,11 @@ const SCREEN_BREAKPOINTS = {
 
 // Function to calculate dynamic max pixel size based on canvas dimensions
 function getDynamicMaxPixelSize(canvasWidth, canvasHeight) {
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-    
-    // Reserve space for UI elements (toolbars, margins, etc.)
-    const availableWidth = screenWidth - 100; // 100px for margins and UI
-    const availableHeight = screenHeight - 300; // 300px for toolbars and UI
+    // The canvas area is the scrolling region between the tool rail and the
+    // properties panel; the bezel around the grid takes a fixed margin.
+    const area = getCanvasAreaSize();
+    const availableWidth = area.width - (canvasWidth - 1) * GRID_GAP;
+    const availableHeight = area.height - (canvasHeight - 1) * GRID_GAP;
     
     // Calculate theoretical max pixel size for each dimension
     const maxWidthPixelSize = Math.floor(availableWidth / canvasWidth);
@@ -187,8 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         onScalingCancel
     );
 
-    //set the background color
-    document.body.style.backgroundColor=bgColor;
+    // Page background is themed in styles.css (bgColor is kept for compatibility only)
 
     // --- Event Listeners for GUI ---
 
@@ -226,12 +221,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Handle minus button click
                     if (currentMode === "animation") {
                         deleteFrame();
-                    }
-                    break;
-                case "swapButton":
-                    // Handle minus button click
-                    if (currentMode === "animation") {
-                        swap_diag();
                     }
                     break;
                 default:
@@ -688,6 +677,9 @@ document.addEventListener('DOMContentLoaded', function() {
           rtmouseBtnColor = dd.options[nextcolorIndex].value;
           updateColorPreviews();
       }//func
+        // selectForegroundColor/selectBackgroundColor live outside this closure
+        window.openColorPicker = openColorPicker;
+        window.changermbColor = changermbColor;
 
         // Function to update color picker visibility based on current mode
         function updateColorPickerVisibility() {
@@ -853,6 +845,10 @@ document.addEventListener('DOMContentLoaded', function() {
             );
             historyManager.execute(action);
             pendingPixelChanges = [];
+            updateTextDisplay();
+            if (window.JTEdit && window.JTEdit.ui && window.JTEdit.ui.afterDraw) {
+                window.JTEdit.ui.afterDraw();
+            }
         }
         isDragging = false;
         mousebtn_Gbl=-1; 
@@ -894,6 +890,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("fitToScreenButton").addEventListener("click", fitToScreen);
     document.getElementById("autoScaleToggle").addEventListener("change", toggleAutoScale);
     document.getElementById("gridToggle").addEventListener("change", toggleGrid);
+    document.getElementById("ledToggle").addEventListener("change", toggleLed);
+
+    // Explicit "Resize canvas" button: same dialog the size dropdown uses, target
+    // size is chosen inside the dialog.
+    document.getElementById("resizeCanvasButton").addEventListener("click", function() {
+        scalingDialog.show(
+            pixelArrayFrames[currentFrameIndex],
+            pixelWidth,
+            pixelHeight,
+            pixelWidth,
+            pixelHeight
+        );
+    });
 
     // Unified color selector event listeners
     document.getElementById("foregroundColorPreview").addEventListener("click", selectForegroundColor);
@@ -912,7 +921,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("forwardButton").addEventListener("click", () => handleButtonClick("forwardButton"));
     document.getElementById("plusButton").addEventListener("click", () => handleButtonClick("plusButton"));
     document.getElementById("minusButton").addEventListener("click", () => handleButtonClick("minusButton"));
-    document.getElementById("swapButton").addEventListener("click", () => handleButtonClick("swapButton"));
 
     // Help modal event listeners
     document.getElementById("closeHelpModal").addEventListener("click", hideHelpModal);
@@ -1279,10 +1287,19 @@ function loadPixelArrayFromJTFile(data) {
         // Apply scaling to current frame or all frames
         const sourcePixels = pixelArrayFrames[currentFrameIndex];
         
-        // Get the current target dimensions from the size dropdown
+        // Target dimensions come from the dialog; keep the size dropdown in step
         const sizeDropdown = document.getElementById("sizeDropdown");
-        const selectedSizeNew = sizeDropdown.value;
-        const [newHeight, newWidth] = selectedSizeNew.split("x").map(Number);
+        let newWidth, newHeight;
+        if (options && options.targetWidth && options.targetHeight) {
+            newWidth = options.targetWidth;
+            newHeight = options.targetHeight;
+            sizeDropdown.value = `${newHeight}x${newWidth}`;
+        } else {
+            [newHeight, newWidth] = sizeDropdown.value.split("x").map(Number);
+        }
+        // Size presets only: keep format in step with the size (16x64 panels use v2)
+        selectedFormat = sizeDropdown.value === "16x64" ? "v2" : "v1";
+        document.getElementById("formatDropdown").value = selectedFormat;
         
         if (currentMode === 'animation') {
             // Scale all frames
@@ -1415,6 +1432,7 @@ function loadPixelArrayFromJTFile(data) {
     updateColorPickerVisibility(); // Initialize color picker visibility
     updateColorPreviews(); // Initialize unified color selector
     initializeGrid(); // Initialize grid toggle state
+    initializeLed();  // Initialize LED preview state
     
     // Initialize new features
     initializeToolButtons();
@@ -1636,6 +1654,25 @@ function putBinaryComponent(color) {
 
 
 // --- Enhanced responsive pixel scaling system --- //
+
+// Space available for the pixel grid: the canvas area minus the bezel and grid
+// padding. Falls back to the window when the layout is not present.
+const CANVAS_CHROME = 2 * (18 + 1 + 8) + 8; // bezel padding+border, grid padding (LED mode is widest), breathing room
+const GRID_GAP = 1;                          // gap between cells when grid lines are on (styles.css #pixelCanvas)
+function getCanvasAreaSize() {
+    const area = document.getElementById("canvasArea");
+    if (area) {
+        return {
+            width: Math.max(50, area.clientWidth - CANVAS_CHROME),
+            height: Math.max(50, area.clientHeight - CANVAS_CHROME)
+        };
+    }
+    return {
+        width: Math.max(50, window.innerWidth - 100),
+        height: Math.max(50, window.innerHeight - 300)
+    };
+}
+
 function getScreenBreakpoint() {
     const screenWidth = window.innerWidth;
     
@@ -1654,12 +1691,11 @@ function calculateOptimalPixelSize(pixelWidth, pixelHeight, forceCalculation = f
     }
     
     const breakpoint = getScreenBreakpoint();
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
     
-    // Calculate available space accounting for UI elements and margins
-    const availableWidth = (screenWidth - breakpoint.margin) * breakpoint.scalingFactor;
-    const availableHeight = (screenHeight - 200) * breakpoint.scalingFactor; // 200px for UI elements
+    // Available space is the canvas area itself (see getCanvasAreaSize)
+    const area = getCanvasAreaSize();
+    const availableWidth = area.width - (pixelWidth - 1) * GRID_GAP;
+    const availableHeight = area.height - (pixelHeight - 1) * GRID_GAP;
     
     // Calculate maximum pixel size that fits both dimensions
     const maxPixelWidth = Math.floor(availableWidth / pixelWidth);
@@ -1812,6 +1848,29 @@ function toggleGrid() {
     
     // Save preference to localStorage
     localStorage.setItem('gridEnabled', gridEnabled);
+}
+
+// --- LED Preview Toggle Functions --- //
+let ledEnabled = localStorage.getItem('ledEnabled') !== 'false'; // Default to true
+
+function toggleLed() {
+    const ledToggle = document.getElementById("ledToggle");
+    const pixelCanvas = document.getElementById("pixelCanvas");
+    if (!ledToggle || !pixelCanvas) return;
+
+    ledEnabled = ledToggle.checked;
+    pixelCanvas.classList.toggle('led', ledEnabled);
+
+    localStorage.setItem('ledEnabled', ledEnabled);
+}
+
+function initializeLed() {
+    const ledToggle = document.getElementById("ledToggle");
+    const pixelCanvas = document.getElementById("pixelCanvas");
+    if (!ledToggle || !pixelCanvas) return;
+
+    ledToggle.checked = ledEnabled;
+    pixelCanvas.classList.toggle('led', ledEnabled);
 }
 
 function initializeGrid() {
@@ -2011,12 +2070,17 @@ function swapColors() {
         pixelWidth = actualWidth;
         
         pixelCanvas.style.gridTemplateColumns = `repeat(${actualWidth}, ${pixelSize}px)`;
+        // LED preview reads the cell size for its dot spacing; glow only when the
+        // cells are big enough to see it (6,000 box-shadows at 4 px cost paint time)
+        pixelCanvas.style.setProperty('--cell', `${pixelSize}px`);
+        pixelCanvas.classList.toggle('led-glow', pixelSize >= 12);
 
         pixelArray.forEach((row, rowIndex) => {
             row.forEach((color, columnIndex) => {
             var pixel                       = document.createElement("div");
                 pixel.className             = "pixel";
-                pixel.style.backgroundColor = color;                
+                pixel.style.backgroundColor = color;
+                pixel.style.color           = color;   // LED preview glow uses currentColor
                 pixel.style.width           = `${pixelSize}px`;
                 pixel.style.height          = `${pixelSize}px`;
                 pixel.setAttribute('data-row', rowIndex);
@@ -2045,6 +2109,11 @@ function swapColors() {
         });
 
         updateTextDisplay();
+
+        // Let the UI layer (ui.js, timeline.js) refresh readouts and thumbnails
+        if (window.JTEdit && window.JTEdit.ui && window.JTEdit.ui.afterDraw) {
+            window.JTEdit.ui.afterDraw();
+        }
     }//drawPixels
 
       // Function to draw pixel colors while dragging mouse
@@ -2070,10 +2139,16 @@ function swapColors() {
                         pendingPixelChanges.push({row, col, oldColor, newColor});
                     }
                     
-                    // Apply the change visually
+                    // Apply the change visually to the one cell (a full drawPixels()
+                    // rebuild per mousemove is far too slow on 32x192 panels)
                     pixelArray[row][col] = newColor;
-                    drawPixels();
-                    updateTextDisplay();
+                    const cell = document.getElementById("pixelCanvas").children[row * pixelWidth + col];
+                    if (cell) {
+                        cell.style.backgroundColor = newColor;
+                        cell.style.color = newColor;
+                    } else {
+                        drawPixels();
+                    }
                 }
             }
         }
@@ -2112,6 +2187,37 @@ function swapColors() {
     drawPixels();setTimeout(updateFrameDisplay,100);                              
   }
   
+  // Move frame at index `from` to index `to` (0-based). Used by the timeline drag reorder.
+  function moveFrame(from, to){
+    if (!Array.isArray(pixelArrayFrames)) return false;
+    const n = pixelArrayFrames.length;
+    if (from === to || from < 0 || to < 0 || from >= n || to >= n) return false;
+    const [frame] = pixelArrayFrames.splice(from, 1);
+    pixelArrayFrames.splice(to, 0, frame);
+    if (currentFrameIndex === from) {
+      currentFrameIndex = to;
+    } else if (from < currentFrameIndex && to >= currentFrameIndex) {
+      currentFrameIndex--;
+    } else if (from > currentFrameIndex && to <= currentFrameIndex) {
+      currentFrameIndex++;
+    }
+    totalFrames = pixelArrayFrames.length;
+    drawPixels();
+    updateFrameDisplay();
+    updateTextDisplay();
+    return true;
+  }
+
+  // Select a frame by index (0-based). Used by the timeline.
+  function selectFrame(index){
+    if (index < 0 || index >= totalFrames || index === currentFrameIndex) return false;
+    currentFrameIndex = index;
+    drawPixels();
+    updateFrameDisplay();
+    updateTextDisplay();
+    return true;
+  }
+
   function deleteFrame(){
     var i,j
     if (totalFrames>1){                                 //only delete if frames > 1
@@ -2127,79 +2233,6 @@ function swapColors() {
       }                              
   }
 
-// swap_diag dialog functions##########################################
-function swap_diag(){
-if (totalFrames==1){return;}
-if (diag_idx2>totalFrames){diag_idx2=totalFrames}
-if (diag_idx1>totalFrames){diag_idx1=totalFrames}
-if (diag_idx1==diag_idx2){diag_idx1--;}
-var x='<table border=0 style="margin-right: auto; margin-left: auto;"><tr><td class=bigbutton colspan=2>&nbsp;&nbsp;&nbsp;Swap Frames&nbsp;&nbsp;&nbsp;</td>'
-+'</tr></table>'
-
-+'<table border=0 cellspacing=3 style="margin-right: auto; margin-left: auto;"><tr>'
-+'<td colspan=3 style="text-align:center;font-size:16px;font-weight:bold;">- Swap -</td><td></td>'
-+'<td colspan=3 style="text-align:center;font-size:16px;font-weight:bold;">- with -</td></tr>'
-+'<tr><td><input class=bigbutton type="button" value="&nbsp;&#9660;&nbsp;" onclick=swap_diag_btn1(-1) /></td>'
-+'<td class=bigbutton id=diag_swap_id1>'+diag_idx1+'</td>'
-+'<td><input class=bigbutton type="button" value="&nbsp;&#9650;&nbsp;" onclick=swap_diag_btn1(1) /></td>'
-+'<td></td>'
-+'<td><input class=bigbutton type="button" value="&nbsp;&#9660;&nbsp;" onclick=swap_diag_btn2(-1) /></td>'
-+'<td class=bigbutton id=diag_swap_id2>'+diag_idx2+'</td>'
-+'<td><input class=bigbutton type="button" value="&nbsp;&#9650;&nbsp;" onclick=swap_diag_btn2(1) /></td>'
-+'</tr></table>'
-
-+'<table cellpadding=6 style="width: 100%;"><tr><td>'
-+'<input style="float: left; font-size: 30px; min-width: 3ch;" type="button" value="Cancel" onclick=swap_diag_close() /></td>'
-+'<td><input style="float: right; font-size: 30px; min-width: 3ch;" type="button" value="OK" '
-+'onclick=swap_diag_ok(swapFrames()) /></td></tr></table>'
-
-document.querySelector('.swapdiag-content').innerHTML=x
-id('swapdiagid').style.display='block';
-/*center the diag
-var myht = document.querySelector('.swapdiag-content').clientHeight
-var tht = document.querySelector('body').clientHeight
-var ans = tht/2 - myht/2
-document.querySelector('.swapdiag').style.paddingTop=ans.toString()+"px"
-*/
-}
-
-function swap_diag_close(){id('swapdiagid').style.display='none'}
-
-function swap_diag_ok(){
-  swapFrames(parseInt(diag_idx1), parseInt(diag_idx2))
-swap_diag_close()
-}
-
-function swap_diag_btn1(dir){
-  if (diag_idx1+dir>totalFrames){return;}
-  if (diag_idx1+dir<1){return;}
-  if (diag_idx1+dir == diag_idx2){
-    if (diag_idx1+dir+dir < totalFrames+1 && diag_idx1+dir+dir > 0){
-      diag_idx1+=dir;
-    }else{
-      return;
-    }
-  }
-  diag_idx1+=dir
-  id("diag_swap_id1").innerHTML=diag_idx1
-}
-
-function swap_diag_btn2(dir){
-if (diag_idx2+dir>totalFrames){return;}
-if (diag_idx2+dir<1){return;}
-  if (diag_idx2+dir == diag_idx1){
-    if (diag_idx2+dir+dir < totalFrames+1 && diag_idx2+dir+dir > 0){
-      diag_idx2+=dir;
-    }else{
-      return;
-    }
-  }
-diag_idx2+=dir
-id("diag_swap_id2").innerHTML=diag_idx2
-}
-
-function id(x){return document.getElementById(x);}
-// end swap_diag dialog functions##########################################
 
 // --- debug functions --- //
 

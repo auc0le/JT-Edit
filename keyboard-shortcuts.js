@@ -234,6 +234,15 @@ document.addEventListener('DOMContentLoaded', function() {
             gridToggle.dispatchEvent(new Event('change'));
         }
     });
+
+    // LED preview toggle
+    shortcuts.register('l', () => {
+        const ledToggle = document.getElementById('ledToggle');
+        if (ledToggle) {
+            ledToggle.checked = !ledToggle.checked;
+            ledToggle.dispatchEvent(new Event('change'));
+        }
+    });
     
     // Mode switching
     shortcuts.register('ctrl+m', () => {
@@ -445,4 +454,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Export for potential use in other modules
     window.JTEdit = window.JTEdit || {};
     window.JTEdit.shortcuts = shortcuts;
-});
+});

@@ -137,7 +137,8 @@ class SelectionRenderer {
         const paddingTop = parseInt(canvasStyles.paddingTop) || 0;
         
         // Get grid gap from computed styles
-        const gridGap = parseInt(canvasStyles.gap) || 1;
+        const parsedGap = parseInt(canvasStyles.gap);
+        const gridGap = Number.isNaN(parsedGap) ? 1 : parsedGap; // 0 when grid lines are off
 
         // Calculate where the actual pixel grid starts within the canvas
         const pixelGridStartX = canvasOffsetX + borderLeft + paddingLeft;
@@ -831,4 +832,4 @@ class SelectionManager {
 
 // Export for use in main app
 window.JTEdit = window.JTEdit || {};
-window.JTEdit.SelectionManager = SelectionManager;
+window.JTEdit.SelectionManager = SelectionManager;
