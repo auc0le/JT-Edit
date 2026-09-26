@@ -15,19 +15,17 @@
 
     let strip = null;
     let raf = 0;
-    let drag = null;           // { from, startX, startY, active, el, over, after }
+    let fullRefresh = true;    // repaint every thumbnail on the next render
+    let drag = null;           // { from, startX, startY, active, el, target, pointerId }
 
     const $ = (id) => document.getElementById(id);
 
     /* ---------- rendering ---------- */
 
     function frameSignature(frame) {
-        // Cheap change detection so untouched thumbnails are not repainted
-        let h = frame.length + ':' + (frame[0] ? frame[0].length : 0);
-        for (let r = 0; r < frame.length; r++) {
-            const row = frame[r];
-            for (let c = 0; c < row.length; c++) h += row[c][1] + row[c][3] + row[c][5];
-        }
+        // Full colour strings: a change anywhere in a frame must repaint its thumbnail
+        let h = frame.length + ':' + (frame[0] ? frame[0].length : 0) + ':';
+        for (let r = 0; r < frame.length; r++) h += frame[r].join('');
         return h;
     }
 
@@ -72,15 +70,23 @@
         return btn;
     }
 
+    function isPlaying() {
+        const icon = document.querySelector('#playPauseButton i');
+        return !!(icon && icon.classList.contains('fa-pause'));
+    }
+
     function render() {
         raf = 0;
         if (!strip || typeof pixelArrayFrames === 'undefined') return;
         if (typeof currentMode !== 'undefined' && currentMode !== 'animation') {
             strip.innerHTML = '';
+            fullRefresh = true;
             return;
         }
         const frames = pixelArrayFrames;
         const count = frames.length;
+        const full = fullRefresh;
+        fullRefresh = false;
 
         // Reconcile the number of thumbnails
         while (strip.children.length > count) strip.removeChild(strip.lastChild);
@@ -91,21 +97,27 @@
             const frame = frames[i];
             if (!frame || !frame.length) continue;
             btn.dataset.index = String(i);
-            const sig = frameSignature(frame);
-            if (btn.dataset.sig !== sig) {
-                paint(btn.firstChild, frame);
-                btn.dataset.sig = sig;
-            }
             const current = i === currentFrameIndex;
+            // Only the current frame can change between renders unless something
+            // replaced the frame arrays (resize, load, reorder) or asked for a full refresh
+            if (full || current || btn._frame !== frame) {
+                const sig = frameSignature(frame);
+                if (btn.dataset.sig !== sig) {
+                    paint(btn.firstChild, frame);
+                    btn.dataset.sig = sig;
+                }
+                btn._frame = frame;
+            }
             btn.classList.toggle('is-current', current);
             btn.setAttribute('aria-selected', current ? 'true' : 'false');
             btn.setAttribute('aria-label', `Frame ${i + 1} of ${count}${current ? ', current' : ''}`);
             btn.lastChild.textContent = String(i + 1);
         }
 
-        // Keep the current thumbnail in view
+        // Keep the current thumbnail in view, but never pull the strip out from
+        // under the pointer during playback or a drag
         const cur = strip.children[currentFrameIndex];
-        if (cur && cur.scrollIntoView && !drag) {
+        if (cur && cur.scrollIntoView && !drag && !isPlaying()) {
             cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
     }
@@ -115,10 +127,15 @@
         raf = requestAnimationFrame(render);
     }
 
+    function invalidate() {
+        fullRefresh = true;
+        refresh();
+    }
+
     /* ---------- pointer interaction: click selects, drag reorders ---------- */
 
     function thumbFromEvent(e) {
-        const t = e.target.closest ? e.target.closest('.frame-thumb') : null;
+        const t = e.target && e.target.closest ? e.target.closest('.frame-thumb') : null;
         return t && strip.contains(t) ? t : null;
     }
 
@@ -128,12 +145,24 @@
         });
     }
 
+    // Insertion index (0..count) for a pointer x position
+    function insertionIndexAt(x) {
+        const thumbs = Array.from(strip.children);
+        for (let i = 0; i < thumbs.length; i++) {
+            const r = thumbs[i].getBoundingClientRect();
+            if (x < r.left + r.width / 2) return i;
+        }
+        return thumbs.length;
+    }
+
     function onPointerDown(e) {
         if (e.button !== 0) return;
         const thumb = thumbFromEvent(e);
         if (!thumb) return;
-        drag = { from: Number(thumb.dataset.index), startX: e.clientX, startY: e.clientY, active: false, el: thumb, over: -1, after: false };
-        thumb.setPointerCapture && thumb.setPointerCapture(e.pointerId);
+        drag = { from: Number(thumb.dataset.index), startX: e.clientX, startY: e.clientY, active: false, el: thumb, target: -1, pointerId: e.pointerId };
+        if (thumb.setPointerCapture) {
+            try { thumb.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        }
     }
 
     function onPointerMove(e) {
@@ -144,64 +173,80 @@
             drag.el.classList.add('is-dragging');
             strip.setAttribute('aria-busy', 'true');
         }
-        // Find the insertion point from the pointer's x position
         clearDropMarks();
         const thumbs = Array.from(strip.children);
-        let over = -1, after = false;
-        for (let i = 0; i < thumbs.length; i++) {
-            const r = thumbs[i].getBoundingClientRect();
-            if (e.clientX < r.left + r.width / 2) { over = i; after = false; break; }
-            over = i; after = true;
+        const insertAt = insertionIndexAt(e.clientX);
+        // Inserting right before or right after the dragged frame is a no-op: no marker
+        if (insertAt === drag.from || insertAt === drag.from + 1) {
+            drag.target = -1;
+            return;
         }
-        drag.over = over;
-        drag.after = after;
-        if (over >= 0 && over !== drag.from) {
-            thumbs[over].classList.add(after ? 'drop-after' : 'drop-before');
+        drag.target = insertAt;
+        if (insertAt < thumbs.length) {
+            thumbs[insertAt].classList.add('drop-before');
+        } else if (thumbs.length) {
+            thumbs[thumbs.length - 1].classList.add('drop-after');
         }
     }
 
-    function onPointerUp(e) {
+    function finishDrag(commit, e) {
         if (!drag) return;
         const d = drag;
         drag = null;
         clearDropMarks();
         d.el.classList.remove('is-dragging');
         strip.removeAttribute('aria-busy');
-        d.el.releasePointerCapture && d.el.releasePointerCapture(e.pointerId);
+        if (d.el.releasePointerCapture && d.pointerId !== undefined) {
+            try { d.el.releasePointerCapture(d.pointerId); } catch (err) { /* ignore */ }
+        }
+        if (!commit) return;
 
         if (!d.active) {
             // Plain click: select the frame
             if (typeof selectFrame === 'function') selectFrame(d.from);
             return;
         }
-        if (d.over < 0) return;
-        let to = d.after ? d.over + 1 : d.over;
+        // Only a release over the strip reorders; releasing elsewhere cancels
+        const r = strip.getBoundingClientRect();
+        if (!e || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top - 24 || e.clientY > r.bottom + 24) return;
+        if (d.target < 0) return;
+        let to = d.target;
         if (to > d.from) to--;               // account for the removal of the dragged frame
         if (to !== d.from && typeof moveFrame === 'function') moveFrame(d.from, to);
     }
 
-    function onPointerCancel() {
-        if (!drag) return;
-        clearDropMarks();
-        drag.el.classList.remove('is-dragging');
-        strip.removeAttribute('aria-busy');
-        drag = null;
-    }
+    function onPointerUp(e) { finishDrag(true, e); }
+    function onPointerCancel() { finishDrag(false); }
 
     function onKeyDown(e) {
-        // Alt+←/→ moves the focused frame; plain arrows are the global prev/next shortcuts
         const thumb = thumbFromEvent(e);
-        if (!thumb || !e.altKey) return;
+        if (!thumb) return;
         const from = Number(thumb.dataset.index);
-        if (e.key === 'ArrowLeft' && from > 0) { e.preventDefault(); moveFrame(from, from - 1); focusThumb(from - 1); }
-        if (e.key === 'ArrowRight' && from < totalFrames - 1) { e.preventDefault(); moveFrame(from, from + 1); focusThumb(from + 1); }
+        if (e.key === 'Enter' || e.key === ' ') {
+            // Activate = select (Space must not reach the global play/pause shortcut)
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof selectFrame === 'function') selectFrame(from);
+            return;
+        }
+        if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            // Alt+arrows move the focused frame; always swallow the key so the
+            // browser's Back/Forward navigation never fires at the ends
+            e.preventDefault();
+            e.stopPropagation();
+            const to = e.key === 'ArrowLeft' ? from - 1 : from + 1;
+            if (to >= 0 && to < totalFrames && typeof moveFrame === 'function') {
+                moveFrame(from, to);
+                focusThumb(to);
+            }
+        }
     }
 
     function focusThumb(index) {
         requestAnimationFrame(() => { const t = strip.children[index]; if (t) t.focus(); });
     }
 
-    window.JTEdit.timeline = { refresh, render };
+    window.JTEdit.timeline = { refresh, render, invalidate };
 
     document.addEventListener('DOMContentLoaded', () => {
         strip = $('frameStrip');
@@ -210,16 +255,21 @@
         strip.addEventListener('pointermove', onPointerMove);
         strip.addEventListener('pointerup', onPointerUp);
         strip.addEventListener('pointercancel', onPointerCancel);
+        strip.addEventListener('lostpointercapture', () => { if (drag && drag.active) finishDrag(false); });
         strip.addEventListener('keydown', onKeyDown);
         strip.addEventListener('dragstart', (e) => e.preventDefault());
+        // A release that never reaches the strip (capture lost, window blur) ends the drag
+        document.addEventListener('pointerup', (e) => { if (drag && !strip.contains(e.target)) finishDrag(false); });
+        window.addEventListener('blur', () => finishDrag(false));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drag) finishDrag(false); }, true);
 
         const add = $('frameAddButton');
         const plus = $('plusButton');
         if (add && plus) add.addEventListener('click', () => plus.click());
 
         const mode = $('modeDropdown');
-        if (mode) mode.addEventListener('change', refresh);
+        if (mode) mode.addEventListener('change', invalidate);
 
-        refresh();
+        invalidate();
     });
 })();

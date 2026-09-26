@@ -201,6 +201,12 @@ function generateType2FrameData(frame) {
 }
 
 // Function to convert hex color to RGB values
+// [r, g, b] for the PNG exporter (savePixelArrayAsImage); unknown values export as black
+function pixarrToRgb(hex) {
+  const rgb = hexToRgb(hex);
+  return rgb ? [rgb.r, rgb.g, rgb.b] : [0, 0, 0];
+}
+
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {

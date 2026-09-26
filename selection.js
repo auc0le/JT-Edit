@@ -124,8 +124,11 @@ class SelectionRenderer {
         const canvasRect = this.canvas.getBoundingClientRect();
 
         // Calculate canvas position relative to container
-        const canvasOffsetX = canvasRect.left - containerRect.left;
-        const canvasOffsetY = canvasRect.top - containerRect.top;
+        // The overlay is positioned from the container's padding edge, so its border
+        // must not be counted in the canvas offset
+        const containerStyles = getComputedStyle(container);
+        const canvasOffsetX = canvasRect.left - containerRect.left - (parseInt(containerStyles.borderLeftWidth) || 0);
+        const canvasOffsetY = canvasRect.top - containerRect.top - (parseInt(containerStyles.borderTopWidth) || 0);
 
         // Get computed styles for the canvas
         const canvasStyles = getComputedStyle(this.canvas);
@@ -265,6 +268,11 @@ class SelectionRenderer {
 
 
     startMarchingAnts() {
+        // One loop at a time: every render used to start another one that was never cancelled
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
         const animate = () => {
             this.dashOffset = (this.dashOffset + 1) % 10;
             const elements = this.overlay.querySelectorAll('.marching-ants');
@@ -348,6 +356,17 @@ class SelectionManager {
     onLayoutChange() {
         // Invalidate cached positioning metrics
         this.renderer.invalidateCache();
+        
+        // A selection that no longer fits the canvas (after a resize or a file load)
+        // must go, or moving it would write outside the pixel array
+        if (this.hasSelection()) {
+            const bounds = this.currentSelection.getBounds();
+            const dims = this.getCanvasDimensions();
+            if (bounds && (bounds.maxRow >= dims.height || bounds.maxCol >= dims.width)) {
+                this.clear();
+                return;
+            }
+        }
         
         // Re-render current selection with updated positioning
         if (this.hasSelection()) {
@@ -832,4 +851,4 @@ class SelectionManager {
 
 // Export for use in main app
 window.JTEdit = window.JTEdit || {};
-window.JTEdit.SelectionManager = SelectionManager;
+window.JTEdit.SelectionManager = SelectionManager;

@@ -152,7 +152,7 @@ class BilinearScaler extends IScalingAlgorithm {
                 
                 const hexColor = this.rgbToHex(r, g, b);
                 // Only quantize to 3-bit if the application is in 3-bit mode
-                targetPixels[y][x] = (window.colorFormat === '3bit') ? this.quantizeToThreeBit(hexColor) : hexColor;
+                targetPixels[y][x] = (isThreeBitMode()) ? this.quantizeToThreeBit(hexColor) : hexColor;
             }
         }
         
@@ -252,20 +252,15 @@ class CanvasScaler {
         const targetRatio = targetWidth / targetHeight;
         const aspectRatioMatch = Math.abs(sourceRatio - targetRatio) < 0.01;
         
-        // Calculate centered positioning for non-matching ratios
-        let centeredSize, offsetX = 0, offsetY = 0;
-        
-        if (!aspectRatioMatch) {
-            // Use minimum scale to fit entirely within target
-            const minScale = Math.min(scaleX, scaleY);
-            centeredSize = {
-                width: Math.round(sourceWidth * minScale),
-                height: Math.round(sourceHeight * minScale)
-            };
-            
-            offsetX = Math.floor((targetWidth - centeredSize.width) / 2);
-            offsetY = Math.floor((targetHeight - centeredSize.height) / 2);
-        }
+        // Size of the source scaled to fit entirely inside the target (also needed
+        // when the ratios match: the positioned branches always use it)
+        const minScale = Math.min(scaleX, scaleY);
+        const centeredSize = {
+            width: Math.max(1, Math.round(sourceWidth * minScale)),
+            height: Math.max(1, Math.round(sourceHeight * minScale))
+        };
+        const offsetX = Math.floor((targetWidth - centeredSize.width) / 2);
+        const offsetY = Math.floor((targetHeight - centeredSize.height) / 2);
         
         return {
             scaleX,
@@ -336,7 +331,8 @@ class CanvasScaler {
     
     scalePixelArray(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, options = {}) {
         const algorithm = options.algorithm || this.defaultAlgorithm;
-        const backgroundColor = options.backgroundColor || this.defaultBackgroundColor;
+        const rawBackground = options.backgroundColor || this.defaultBackgroundColor;
+        const backgroundColor = isThreeBitMode() ? quantizeHexToThreeBit(rawBackground) : rawBackground;
         const positioning = options.positioning || { vertical: 'center', horizontal: 'middle' };
         
         const scaler = this.strategy.getAlgorithm(algorithm);
@@ -456,8 +452,9 @@ class CanvasScaler {
     }
     
     generatePreview(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, algorithm = 'nearest', options = {}) {
-        // Generate a smaller preview for performance
-        const previewScale = 0.5;
+        // Preview at the real target size so it shows exactly what Apply will do
+        // (panels are small; the preview canvas scales the result down)
+        const previewScale = 1;
         const previewWidth = Math.max(1, Math.round(targetWidth * previewScale));
         const previewHeight = Math.max(1, Math.round(targetHeight * previewScale));
         
@@ -483,6 +480,19 @@ class CanvasScaler {
     }
 }
 
+// colorFormat is a script-global `let` in app.js (not a window property)
+function isThreeBitMode() {
+    return typeof colorFormat !== 'undefined' && colorFormat === '3bit';
+}
+
+// Nearest of the 8 panel colours for a '#RRGGBB' value
+function quantizeHexToThreeBit(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!m) return '#000000';
+    const q = v => (parseInt(v, 16) >= 128 ? 'FF' : '00');
+    return '#' + q(m[1]) + q(m[2]) + q(m[3]);
+}
+
 /**
  * Scaling Preview Dialog - UI for scaling preview
  * Single Responsibility: Manages scaling preview interface
@@ -500,15 +510,18 @@ class ScalingPreviewDialog {
     createDialog() {
         this.dialog = document.createElement('div');
         this.dialog.className = 'scaling-dialog modal';
+        this.dialog.setAttribute('role', 'dialog');
+        this.dialog.setAttribute('aria-modal', 'true');
+        this.dialog.setAttribute('aria-labelledby', 'scalingDialogTitle');
         this.dialog.innerHTML = `
             <div class="modal__content scaling-dialog__content">
                 <div class="modal__header">
                     <div>
-                        <h2 class="modal__title">Resize canvas</h2>
+                        <h2 class="modal__title" id="scalingDialogTitle">Resize canvas</h2>
                         <p class="modal__subtitle">Change the panel size and choose how the existing pixels are mapped.</p>
                     </div>
                     <button class="btn btn--icon-sm" id="closeScalingDialog" aria-label="Close">
-                        <i class="fas fa-times"></i>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
                 <div class="modal__body">
@@ -529,8 +542,8 @@ class ScalingPreviewDialog {
                         <div class="option-group">
                             <label for="scalingResizeMode">Fit</label>
                             <select id="scalingResizeMode" class="control-input">
-                                <option value="stretch" selected>Stretch to fit</option>
-                                <option value="keep-size">Keep pixel size</option>
+                                <option value="stretch" selected>Stretch to fill</option>
+                                <option value="keep-size">Fit inside and anchor</option>
                             </select>
                         </div>
                         
@@ -576,7 +589,7 @@ class ScalingPreviewDialog {
                     </div>
                 </div>
                 <div class="modal__footer">
-                    <span class="footer-note">Ctrl+Z undoes nothing here yet: resizing replaces the canvas.</span>
+                    <span class="footer-note" id="scalingNote">Resizing replaces the canvas and clears the undo history.</span>
                     <button id="cancelScaling" class="btn btn--secondary">Cancel</button>
                     <button id="applyScaling" class="btn btn--primary">Resize</button>
                 </div>
@@ -626,6 +639,14 @@ class ScalingPreviewDialog {
                 this.handleCancel();
             }
         });
+
+        // Escape cancels while the dialog is open
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.dialog.classList.contains('modal--open')) {
+                e.preventDefault();
+                this.handleCancel();
+            }
+        });
     }
     
     updatePositionVisibility() {
@@ -651,10 +672,17 @@ class ScalingPreviewDialog {
         this.updatePositionVisibility();
         this.updatePreview();
         this.renderBeforePreview();
+        this.returnFocusTo = document.activeElement;
+        const first = this.dialog.querySelector('#scalingTargetSize');
+        if (first) first.focus();
     }
     
     hide() {
         this.dialog.classList.remove('modal--open');
+        if (this.returnFocusTo && this.returnFocusTo.focus) {
+            this.returnFocusTo.focus();
+        }
+        this.returnFocusTo = null;
     }
 
     // Mirror the panel-size presets from the main size dropdown into the dialog
@@ -675,6 +703,10 @@ class ScalingPreviewDialog {
     }
     
     updatePreview() {
+        // A failed preview must not leave the previous (different-size) result behind
+        this.currentPreview = null;
+        const applyBtn = this.dialog.querySelector('#applyScaling');
+        const note = this.dialog.querySelector('#scalingNote');
         const algorithm = this.dialog.querySelector('#scalingAlgorithm').value;
         const resizeMode = this.dialog.querySelector('#scalingResizeMode').value;
         const verticalPosition = this.dialog.querySelector('#scalingVerticalPosition').value;
@@ -693,18 +725,28 @@ class ScalingPreviewDialog {
             };
         }
         
-        const preview = this.scaler.generatePreview(
-            this.sourcePixels,
-            this.sourceWidth,
-            this.sourceHeight,
-            this.targetWidth,
-            this.targetHeight,
-            algorithm,
-            {
-                positioning: positioning,
-                backgroundColor: backgroundColor
-            }
-        );
+        let preview;
+        try {
+            preview = this.scaler.generatePreview(
+                this.sourcePixels,
+                this.sourceWidth,
+                this.sourceHeight,
+                this.targetWidth,
+                this.targetHeight,
+                algorithm,
+                {
+                    positioning: positioning,
+                    backgroundColor: backgroundColor
+                }
+            );
+        } catch (err) {
+            console.error('Preview failed:', err);
+            applyBtn.disabled = true;
+            if (note) note.textContent = 'This combination cannot be previewed. Choose another method or fit.';
+            return;
+        }
+        applyBtn.disabled = false;
+        if (note) note.textContent = 'Resizing replaces the canvas and clears the undo history.';
         
         this.currentPreview = {
             algorithm,
@@ -729,7 +771,7 @@ class ScalingPreviewDialog {
         this.renderPixelsToCanvas(ctx, this.sourcePixels, scale);
         
         this.dialog.querySelector('#beforeInfo').textContent = 
-            `${this.sourceWidth} × ${this.sourceHeight}`;
+            `${this.sourceHeight} × ${this.sourceWidth}`;
     }
     
     renderAfterPreview(preview) {
@@ -743,7 +785,7 @@ class ScalingPreviewDialog {
         this.renderPixelsToCanvas(ctx, preview.pixels, scale);
         
         this.dialog.querySelector('#afterInfo').textContent = 
-            `${this.targetWidth} × ${this.targetHeight}`;
+            `${this.targetHeight} × ${this.targetWidth}`;
     }
     
     renderPixelsToCanvas(ctx, pixels, scale) {
@@ -789,4 +831,4 @@ window.JTEdit.Scaling = {
     CanvasScaler,
     ScalingPreviewDialog,
     ScalingStrategy
-};
+};

@@ -134,20 +134,22 @@ button:focus:not(:focus-visible) { outline: none; }
 
 /* Top bar */
 .topbar {
-    height: var(--topbar-h);
+    min-height: var(--topbar-h);
     flex-shrink: 0;
     display: flex;
+    flex-wrap: wrap;            /* narrow windows: the groups drop to a second row */
     align-items: center;
-    gap: var(--space-3);
+    gap: 6px var(--space-3);
     padding: 0 var(--space-3);
     background: var(--surface);
     border-bottom: 1px solid var(--hairline);
 }
 
-.topbar__group { display: flex; align-items: center; gap: 6px; }
-.topbar__group--left { min-width: 220px; gap: 10px; }
+.topbar__group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topbar__group--left { width: 220px; gap: 10px; }
 .topbar__group--centre { flex: 1 1 auto; justify-content: center; gap: 10px; }
 .topbar__group--right { width: 420px; justify-content: flex-end; }
+.split { flex-shrink: 0; }
 
 .brand {
     display: inline-flex;
@@ -240,7 +242,6 @@ button:focus:not(:focus-visible) { outline: none; }
     gap: 8px;
 }
 .section:last-child { border-bottom: 0; }
-.section--bottom { margin-top: auto; }
 
 .section__head {
     display: flex;
@@ -342,12 +343,12 @@ button:focus:not(:focus-visible) { outline: none; }
 
 .btn--secondary { background: var(--raised); }
 
-.btn--ghost, .btn--icon {
+.btn--icon {
     background: transparent;
     border-color: transparent;
     color: var(--text-2);
 }
-.btn--ghost:hover:not(:disabled), .btn--icon:hover:not(:disabled) {
+.btn--icon:hover:not(:disabled) {
     background: var(--raised);
     border-color: transparent;
     color: var(--text);
@@ -433,7 +434,7 @@ i.icon.fa-pause .icon-pause { display: block; }
     bottom: 3px;
     font-family: var(--font-mono);
     font-size: 9px;
-    opacity: 0.6;
+    opacity: 0.85;
 }
 .tool-btn.active .tool-btn__key { opacity: 0.7; }
 
@@ -456,7 +457,6 @@ i.icon.fa-pause .icon-pause { display: block; }
 }
 .select:hover { border-color: #3A4150; }
 .select--mono { font-family: var(--font-mono); font-size: 12px; }
-.select--sm { height: 28px; padding: 0 26px 0 10px; font-size: 12px; }
 .select option { background: var(--surface); color: var(--text); }
 
 .field {
@@ -508,7 +508,7 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     font-family: var(--font-mono);
     font-size: 12px;
 }
-.stepper__value:focus { outline: none; background: var(--raised); }
+.stepper__value:focus { outline: none; background: var(--raised); box-shadow: inset 0 0 0 2px var(--accent); }
 .stepper__value::-webkit-outer-spin-button,
 .stepper__value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .stepper__value { -moz-appearance: textfield; appearance: textfield; }
@@ -633,6 +633,7 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
 .recent-color {
     width: 24px;
     height: 24px;
+    padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-chip);
     cursor: pointer;
@@ -727,14 +728,13 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
 .transform-row { display: flex; align-items: center; gap: 16px; }
 .transform-row__side { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; }
 
-/* Tooltips: one system, data-tooltip only */
-.tooltip { position: relative; }
-.tooltip::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
+/* Tooltips: one system. Elements carry data-tooltip (and tooltip--right/--below/--left
+   for placement); ui.js shows them in this single fixed layer so scrolling panels,
+   the stepper, <select>s and the window edge cannot clip them. */
+.tooltip-layer {
+    position: fixed;
+    left: 0;
+    top: 0;
     padding: 5px 9px;
     border: 1px solid var(--border);
     border-radius: 7px;
@@ -746,16 +746,10 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     line-height: 1.2;
     white-space: nowrap;
     box-shadow: var(--shadow-menu);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.12s ease 0.25s;
     pointer-events: none;
     z-index: var(--z-tooltip);
 }
-.tooltip:hover::after, .tooltip:focus-visible::after { opacity: 1; visibility: visible; }
-.tooltip--below::after { bottom: auto; top: calc(100% + 8px); }
-.tooltip--right::after { left: calc(100% + 10px); bottom: auto; top: 50%; transform: translateY(-50%); }
-.tooltip--left::after { left: auto; right: calc(100% + 10px); bottom: auto; top: 50%; transform: translateY(-50%); }
+.tooltip-layer[hidden] { display: none; }
 
 /* ---------- 5. Canvas ---------- */
 #pixelCanvasContainer {
@@ -808,25 +802,6 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
    6,000 box-shadows at 4 px would slow painting for nothing. */
 #pixelCanvas.led.led-glow .pixel { box-shadow: 0 0 6px 0 currentColor; }
 
-.canvas-badge {
-    position: absolute;
-    left: 16px;
-    top: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 26px;
-    padding: 0 10px;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-chip);
-    background: rgba(21, 24, 32, 0.85);
-    color: var(--text-2);
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 3;
-}
-.canvas-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
-
 /* Selection overlay (selection.js) */
 .selection-overlay {
     position: absolute;
@@ -867,13 +842,16 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     z-index: var(--z-timeline);
 }
 .timeline__bar {
-    height: 44px;
+    min-height: 44px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    padding: 0 14px;
+    gap: 6px 12px;
+    padding: 4px 14px;
     border-bottom: 1px solid var(--hairline);
 }
+.timeline__bar .frame-display { white-space: nowrap; }
+.timeline__meta { white-space: nowrap; }
 .timeline__group { display: inline-flex; align-items: center; gap: 2px; }
 .timeline__label { font-size: 12px; color: var(--muted); }
 .timeline__meta { font-size: 12px; color: var(--muted); }
@@ -903,10 +881,17 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    overflow-x: auto;
     min-height: 96px;
 }
-.frame-strip__frames { display: flex; align-items: center; gap: 10px; }
+.frame-strip__frames {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 4px 2px;           /* room for the focus ring and drop markers */
+}
 .frame-thumb {
     position: relative;
     flex-shrink: 0;
@@ -957,9 +942,6 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
 .frame-thumb.drop-before::before { left: -7px; }
 .frame-thumb.drop-after::after { right: -7px; }
 .frame-add {
-    position: sticky;            /* stays reachable while the strip scrolls */
-    right: 0;
-    background: var(--surface);
     flex-shrink: 0;
     width: 56px;
     height: 72px;
@@ -971,8 +953,7 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     align-items: center;
     justify-content: center;
 }
-.frame-add:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
-.frame-strip__actions { margin-left: auto; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.frame-add:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- 7. Modals ---------- */
 .modal {
@@ -1173,21 +1154,22 @@ select.control-input {
 /* ---------- 8. Responsive ---------- */
 @media (max-width: 1180px) {
     :root { --panel-w: 248px; }
-    .topbar__group--left { width: 170px; }
-    .topbar__group--right { width: 360px; }
+    .topbar__group--left { width: auto; }
+    .topbar__group--right { width: auto; margin-left: auto; }
     .brand__sub { display: none; }
 }
 @media (max-width: 960px) {
     :root { --panel-w: 224px; }
-    .topbar__group--left { width: auto; }
-    .topbar__group--right { width: auto; }
-    .brand__name { display: none; }
+    .topbar { padding-top: 6px; padding-bottom: 6px; }
+    .topbar__group--centre { order: 3; flex-basis: 100%; justify-content: flex-start; }
     .swatch { height: 40px; }
     .dpad { grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); }
     .dpad__btn { width: 32px; height: 32px; }
 }
 @media (max-width: 720px) {
     .workspace { flex-direction: column; }
+    .centre { flex: 1 1 auto; min-height: 0; }
+    .canvas-area { min-height: 140px; }
     .rail {
         width: auto;
         flex-direction: row;
@@ -1200,6 +1182,7 @@ select.control-input {
     .rail__divider { width: 1px; height: 28px; margin: 0 4px; }
     .panel {
         width: auto;
+        flex: 0 0 auto;
         max-height: 40vh;
         border-left: 0;
         border-top: 1px solid var(--hairline);

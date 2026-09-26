@@ -27,13 +27,13 @@
     <!-- ===== Top bar ===== -->
     <header class="topbar" role="banner">
         <div class="topbar__group topbar__group--left">
-            <a class="brand" href="./" aria-label="JT Edit">
+            <div class="brand">
                 <span class="brand__mark" aria-hidden="true">
                     <svg width="16" height="16" viewBox="0 0 16 16"><g fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="8" cy="3" r="1.6"/><circle cx="13" cy="3" r="1.6"/><circle cx="3" cy="8" r="1.6"/><circle cx="8" cy="8" r="1.6"/><circle cx="13" cy="8" r="1.6"/><circle cx="3" cy="13" r="1.6"/><circle cx="8" cy="13" r="1.6"/><circle cx="13" cy="13" r="1.6"/></g></svg>
                 </span>
                 <span class="brand__name">JT Edit</span>
                 <span class="brand__sub">for CoolLED1248 panels</span>
-            </a>
+            </div>
         </div>
 
         <div class="topbar__group topbar__group--centre">
@@ -95,7 +95,7 @@
 
             <div class="divider" aria-hidden="true"></div>
 
-            <button id="helpButton" class="btn btn--icon tooltip tooltip--below" data-tooltip="Help and shortcuts · ?" aria-label="Help and keyboard shortcuts">
+            <button id="helpButton" class="btn btn--icon tooltip tooltip--below" data-tooltip="Help and shortcuts · F1 or ?" aria-label="Help and keyboard shortcuts">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8"/><path d="M12 17h.01"/></svg>
             </button>
         </div>
@@ -195,7 +195,7 @@
             </div>
 
             <div id="arrayOutput">
-                <pre id="textDisplay" style="display: none;" aria-label="RGB array data"></pre>
+                <pre id="textDisplay" style="display: none;" role="region" aria-label="RGB array data"></pre>
             </div>
 
             <footer class="statusbar" aria-label="Status">
@@ -230,7 +230,7 @@
                 </div>
 
                 <label class="sr-only" for="customColorPicker">Foreground colour (3-bit)</label>
-                <select id="customColorPicker" class="sr-only">
+                <select id="customColorPicker" class="sr-only" tabindex="-1" aria-hidden="true">
                     <option value="#000000">Black</option>
                     <option value="#FFFFFF">White</option>
                     <option value="#FF0000">Red</option>
@@ -245,11 +245,11 @@
                     <input type="color" id="htmlColorPicker" class="color-input" value="#FF0000" aria-label="Foreground colour (24-bit)">
                     <div class="color-input__label">
                         <span>Foreground</span>
-                        <small>Click the swatch to pick. Right click the panel for background.</small>
+                        <small>Click to pick. The lower chip in the tool rail sets the background.</small>
                     </div>
                 </div>
 
-                <div id="recentColorsGrid" aria-label="Recent colours"></div>
+                <div id="recentColorsGrid" role="group" aria-label="Recent colours"></div>
 
                 <div class="swatch-legend" aria-hidden="true">
                     <div class="swatch-legend__chip">
@@ -386,14 +386,17 @@
                     <h3>Edit</h3>
                     <div class="shortcut-list">
                         <div class="shortcut-item"><span class="shortcut-key">Ctrl+Z</span><span class="shortcut-desc">Undo</span></div>
-                        <div class="shortcut-item"><span class="shortcut-key">Ctrl+Y</span><span class="shortcut-desc">Redo</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">Ctrl+Y</span><span class="shortcut-desc">Redo (also Ctrl+Shift+Z)</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">Shift+↑ ↓ ← →</span><span class="shortcut-desc">Shift all pixels one step (wraps)</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">Ctrl+A</span><span class="shortcut-desc">Select the whole canvas</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">Ctrl+C / X / V</span><span class="shortcut-desc">Copy, cut, paste the selection</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">Escape</span><span class="shortcut-desc">Clear the selection</span></div>
                     </div>
                 </div>
                 <div class="help-section">
                     <h3>View</h3>
                     <div class="shortcut-list">
-                        <div class="shortcut-item"><span class="shortcut-key">+ / −</span><span class="shortcut-desc">Zoom in / out</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">+ / =  / −</span><span class="shortcut-desc">Zoom in / out</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">F</span><span class="shortcut-desc">Fit the panel to the window</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">G</span><span class="shortcut-desc">Toggle grid lines</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">L</span><span class="shortcut-desc">Toggle LED preview</span></div>
@@ -404,7 +407,7 @@
                     <h3>Canvas</h3>
                     <div class="shortcut-list">
                         <div class="shortcut-item"><span class="shortcut-key">Ctrl+M</span><span class="shortcut-desc">Toggle static / animation mode</span></div>
-                        <div class="shortcut-item"><span class="shortcut-key">1 – 5</span><span class="shortcut-desc">Quick panel sizes</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">1 – 5</span><span class="shortcut-desc">16×32, 16×64, 16×96, 16×128, 32×128</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">F1 or ?</span><span class="shortcut-desc">This help</span></div>
                     </div>
                 </div>
@@ -418,6 +421,7 @@
                         <div class="shortcut-item"><span class="shortcut-key">Delete</span><span class="shortcut-desc">Delete the current frame</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">Escape</span><span class="shortcut-desc">Stop playback</span></div>
                         <div class="shortcut-item"><span class="shortcut-key">Drag a frame</span><span class="shortcut-desc">Reorder frames in the timeline</span></div>
+                        <div class="shortcut-item"><span class="shortcut-key">Alt+← / →</span><span class="shortcut-desc">Move the focused frame</span></div>
                     </div>
                 </div>
                 <div class="help-section static-only">

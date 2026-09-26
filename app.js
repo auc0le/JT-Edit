@@ -36,8 +36,8 @@ function getDynamicMaxPixelSize(canvasWidth, canvasHeight) {
     // Use the smaller of the two to ensure it fits, with absolute limits
     const dynamicMax = Math.min(maxWidthPixelSize, maxHeightPixelSize);
     
-    // Apply reasonable bounds: minimum 20px, maximum 100px
-    return Math.max(20, Math.min(dynamicMax, 100));
+    // Allow zooming to three times the fit size (the canvas area scrolls), within 20..100px
+    return Math.max(20, Math.min(dynamicMax * 3, 100));
 }
 
 // Function to update pixel size input max attribute based on current canvas size
@@ -61,6 +61,7 @@ let blueBinaryArray     = [[]];
 var mousebtn_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse button, 2 = left mouse button)
 var isDragging = false;
 var pendingPixelChanges = [];
+var lastPaintCell = null;        // last cell painted in the current stroke (for gap filling)
 
 // global vars for animation logic
 let pixelArrayFrames = [[]];
@@ -151,6 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize color picker visibility (will be called after functions are defined)
 
     let isPlaying = false; // Variable to track animation state
+    let animationTimer = null; // pending setTimeout of the playback loop
 
     // === NEW FEATURE MANAGERS ===
     
@@ -238,6 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // clone and directional buttons
         document.getElementById('cloneFrameButton').addEventListener('click', function() {
+            if (currentMode !== "animation") return;
             copyCurrentFrameToEnd();
             updateFrameDisplay();
             drawPixels();
@@ -428,6 +431,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Convert existing pixel data if format changed
             if (oldFormat !== colorFormat && pixelArrayFrames && pixelArrayFrames.length > 0) {
                 convertPixelArrayFormat(oldFormat, colorFormat);
+                if (colorFormat === '3bit') {
+                    // The brushes must be palette colours as well
+                    const fg = hexToRgbValues(selectedColor);
+                    const bg = hexToRgbValues(rtmouseBtnColor);
+                    selectedColor = quantizeColor(fg.r, fg.g, fg.b).toUpperCase();
+                    rtmouseBtnColor = quantizeColor(bg.r, bg.g, bg.b).toUpperCase();
+                    customColorPicker.value = selectedColor;
+                } else {
+                    sync24BitPickerColor();
+                }
+                updateColorPreviews();
                 drawPixels();
                 updateTextDisplay();
             }
@@ -459,19 +473,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         // Function to handle paint bucket button click
-        function handlePaintBucket() {
-            // Set all pixels in the current array to the selected color
-            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelHeight, pixelWidth, selectedColor);
+        function fillCurrentFrame(color) {
+            // Fill in place through the history manager so the fill is one undo step and
+            // earlier PixelActions (which hold the frame array reference) stay valid
+            const action = new window.JTEdit.History.FillAction(
+                pixelArrayFrames[currentFrameIndex],
+                color,
+                null,
+                currentFrameIndex
+            );
+            historyManager.execute(action);
             drawPixels();
             updateTextDisplay();
+        }
+        function handlePaintBucket() {
+            fillCurrentFrame(selectedColor);
         }
 
         // Function to handle RMB paint bucket button click
         function RMBhandlePaintBucket() {
-            // Set all pixels in the current array to the selected color
-            pixelArrayFrames[currentFrameIndex] = createPixelArray(pixelHeight, pixelWidth, rtmouseBtnColor);
-            drawPixels();
-            updateTextDisplay();
+            fillCurrentFrame(rtmouseBtnColor);
         }
 
         // Function to handle animation vs static mode change
@@ -491,6 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 controlButtons.style.display = "none";
             }
             dataType = currentMode === "animation" ? 0 : 1; // 0 = animation, 1 = static
+            applyResponsiveScaling(); // the timeline changes the canvas area height
         }
 
         // Event listener for mode dropdown change
@@ -527,13 +549,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     reader.readAsDataURL(file);
                 }
             }
+            event.target.value = ''; // so the same file can be opened again
         });
 
         // Event listener for palette icon click - removed (now using unified color selector)
 
         // Event listener for right click icon click - removed (now using unified color selector)
         // Event listener for document, disable context menu and assign mousebtn_Gbl event.button
-        document.addEventListener("contextmenu", event => {mousebtn_Gbl=event.button;event.preventDefault();return false;});
+        document.addEventListener("contextmenu", event => {event.preventDefault();return false;});
 
         // Function to handle size change
         function handleSizeChange() {
@@ -560,6 +583,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update your pixel array and canvas size here
             pixelArrayFrames[currentFrameIndex] = createPixelArray(height, width, rtmouseBtnColor);//use rtmouseBtnColor bg 
+            historyManager.clear();   // earlier actions refer to the discarded array
+            selectionManager.clear();
             
             // Update pixel size input max based on new canvas size
             updatePixelSizeInputMax();
@@ -585,6 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const debugToggleIcon = document.getElementById("debugToggle");
             const isDebugVisible = textDisplay.style.display === "block";
             debugToggleIcon.childNodes[0].src = isDebugVisible ? "icons/bugG.png" : "icons/bug.png"
+            applyResponsiveScaling(); // the drawer changes the canvas area height
         }
 
         // Function to show help modal
@@ -753,14 +779,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Always create 5 slots for consistent UI in 24-bit mode
             for (let i = 0; i < 5; i++) {
-                const colorDiv = document.createElement('div');
+                const colorDiv = document.createElement('button');
+                colorDiv.type = 'button';
                 
                 if (i < recentColors.length) {
                     // Populated slot with existing color
                     const color = recentColors[i];
-                    colorDiv.className = 'recent-color';
+                    colorDiv.className = 'recent-color tooltip';
                     colorDiv.style.backgroundColor = color;
-                    colorDiv.title = color;
+                    colorDiv.setAttribute('aria-label', `Use ${color}`);
+                    colorDiv.setAttribute('data-tooltip', color);
                     colorDiv.addEventListener('click', () => {
                         selectedColor = color;
                         sync24BitPickerColor();
@@ -769,9 +797,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 } else {
                     // Empty slot placeholder
-                    colorDiv.className = 'recent-color recent-color-empty';
+                    colorDiv.className = 'recent-color recent-color-empty tooltip';
                     colorDiv.style.backgroundColor = 'transparent';
-                    colorDiv.title = 'Click to add a color';
+                    colorDiv.setAttribute('aria-label', 'Add a colour');
+                    colorDiv.setAttribute('data-tooltip', 'Add a colour');
                     colorDiv.addEventListener('click', () => {
                         // Trigger color picker to populate this empty slot
                         const htmlColorPicker = document.getElementById("htmlColorPicker");
@@ -807,10 +836,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Only show populated colors in 3-bit mode (no placeholders)
             recent3BitColors.forEach(color => {
-                const colorDiv = document.createElement('div');
-                colorDiv.className = 'recent-color';
+                const colorDiv = document.createElement('button');
+                colorDiv.type = 'button';
+                colorDiv.className = 'recent-color tooltip';
                 colorDiv.style.backgroundColor = color;
-                colorDiv.title = color;
+                colorDiv.setAttribute('aria-label', `Use ${color}`);
+                colorDiv.setAttribute('data-tooltip', color);
                 colorDiv.addEventListener('click', () => {
                     selectedColor = color;
                     // Update the 3-bit color picker dropdown
@@ -851,6 +882,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         isDragging = false;
+        lastPaintCell = null;
         mousebtn_Gbl=-1; 
     });
 
@@ -891,6 +923,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("autoScaleToggle").addEventListener("change", toggleAutoScale);
     document.getElementById("gridToggle").addEventListener("change", toggleGrid);
     document.getElementById("ledToggle").addEventListener("change", toggleLed);
+    document.getElementById("delay_id").addEventListener("input", function() {
+        const d = parseInt(this.value, 10);
+        if (!Number.isNaN(d) && d >= 20) delays = d;
+    });
 
     // Explicit "Resize canvas" button: same dialog the size dropdown uses, target
     // size is chosen inside the dialog.
@@ -1048,6 +1084,10 @@ function loadPixelArrayFromJTFile(data) {
         //update mode dropdown
         document.getElementById("modeDropdown").value=currentMode;handleModeChange();
         
+        // A loaded file starts a fresh history; earlier actions refer to discarded arrays
+        historyManager.clear();
+        selectionManager.clear();
+
         // Apply responsive scaling for loaded file
         applyResponsiveScaling();
         
@@ -1073,8 +1113,15 @@ function loadPixelArrayFromJTFile(data) {
         tempCtx.drawImage(img, 0, 0, img.width, img.height);
         const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
         img_gbl = tempCtx.getImageData(0, 0, img.width, img.height)
-        //update size format
-        document.getElementById("sizeDropdown").value=img.height.toString()+"x"+img.width.toString();handleSizeChange();
+        //update size format (only the panel presets are valid sizes)
+        const sizeSelect = document.getElementById("sizeDropdown");
+        const sizeValue = img.height.toString()+"x"+img.width.toString();
+        if (!Array.from(sizeSelect.options).some(o => o.value === sizeValue)) {
+            const sizes = Array.from(sizeSelect.options).map(o => o.textContent.trim()).join(', ');
+            alert(`This image is ${img.height} × ${img.width} pixels. Resize it to a panel size first: ${sizes}.`);
+            return;
+        }
+        sizeSelect.value=sizeValue;handleSizeChange();
         //update mode format
         document.getElementById("modeDropdown").value='static';handleModeChange();
 
@@ -1098,6 +1145,8 @@ function loadPixelArrayFromJTFile(data) {
         }
 
         pixelArrayFrames[currentFrameIndex] = pixelArray;
+        historyManager.clear();
+        selectionManager.clear();
         
         // Apply responsive scaling for loaded image
         applyResponsiveScaling();
@@ -1199,7 +1248,7 @@ function loadPixelArrayFromJTFile(data) {
                     currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
                     drawPixels();
                     updateFrameDisplay();
-                    setTimeout(animate, delays);
+                    animationTimer = setTimeout(animate, delays);
                 } else {
                     // Reset play button icon when animation stops
                     const playPauseIcon = document.querySelector("#playPauseButton i");
@@ -1208,6 +1257,7 @@ function loadPixelArrayFromJTFile(data) {
                 }
             }
 
+            clearTimeout(animationTimer); // play -> pause -> play must not start a second loop
             animate();
         }
     // --- End Animation functions ---
@@ -1242,6 +1292,8 @@ function loadPixelArrayFromJTFile(data) {
         // Initialize undo/redo buttons
         document.getElementById('undoButton').addEventListener('click', () => {
             if (historyManager.undo()) {
+                selectionManager.clear();
+                if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate();
                 drawPixels();
                 updateTextDisplay();
             }
@@ -1249,6 +1301,8 @@ function loadPixelArrayFromJTFile(data) {
         
         document.getElementById('redoButton').addEventListener('click', () => {
             if (historyManager.redo()) {
+                selectionManager.clear();
+                if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate();
                 drawPixels();
                 updateTextDisplay();
             }
@@ -1300,6 +1354,10 @@ function loadPixelArrayFromJTFile(data) {
         // Size presets only: keep format in step with the size (16x64 panels use v2)
         selectedFormat = sizeDropdown.value === "16x64" ? "v2" : "v1";
         document.getElementById("formatDropdown").value = selectedFormat;
+
+        if (newWidth === pixelWidth && newHeight === pixelHeight) {
+            return; // nothing to scale (EPX/bilinear would otherwise alter the pixels)
+        }
         
         if (currentMode === 'animation') {
             // Scale all frames
@@ -1330,6 +1388,9 @@ function loadPixelArrayFromJTFile(data) {
         // Update canvas dimensions
         pixelHeight = newHeight;
         pixelWidth = newWidth;
+        historyManager.clear();   // earlier actions refer to the replaced arrays
+        selectionManager.clear();
+        if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate();
         
         // Update pixel size input max based on new canvas size
         updatePixelSizeInputMax();
@@ -1360,16 +1421,12 @@ function loadPixelArrayFromJTFile(data) {
             const oldColor = pixelArrayFrames[currentFrameIndex][row][col];
             const newColor = button === 0 ? selectedColor : rtmouseBtnColor;
             
+            // A stroke starts here; every cell it touches is committed to history as
+            // one PixelAction on mouseup (so a stroke is a single undo step)
+            lastPaintCell = { row, col };
+            isDragging = true;
             if (oldColor !== newColor) {
-                const action = new window.JTEdit.History.PixelAction(
-                    [{row, col, oldColor, newColor}],
-                    pixelArrayFrames[currentFrameIndex],
-                    currentFrameIndex
-                );
-                
-                historyManager.execute(action);
-                drawPixels();
-                updateTextDisplay();
+                paintCellPending(row, col, newColor);
             }
         } else if (window.currentTool.startsWith('select')) {
             // Handle selection tools
@@ -1473,7 +1530,8 @@ function loadPixelArrayFromJTFile(data) {
             if (totalFrames<10){ttxt="0";}
             currentFrameSpan.textContent = ctxt + (currentFrameIndex + 1).toString();
             totalFramesSpan.textContent = ttxt + (totalFrames).toString();
-            delays = parseInt(document.getElementById("delay_id").value);
+            const typedDelay = parseInt(document.getElementById("delay_id").value, 10);
+            if (!Number.isNaN(typedDelay) && typedDelay >= 20) delays = typedDelay;
         }  
 
 // --- Reads animation and static data from coolLED v2.1.x --- //
@@ -1482,7 +1540,6 @@ function convertToPixelArrayFrames(jtData, pixelWidth, pixelHeight, totalFrames)
     document.getElementById("sizeDropdown").value=pixelHeight.toString()+"x"+pixelWidth.toString();
     //set to frame 0
     currentFrameIndex=0;
-    document.getElementById("backButton").click()
     const pixelArrayFrames = [];
     const pixelsPerColor = pixelWidth * pixelHeight/8   //is 64 for 16x32 file, 64*3=192 elements for 3 colors
     var i,j;var curRow;var frameIndex;var curRowx=0;
@@ -1846,6 +1903,11 @@ function toggleGrid() {
         pixelCanvas.classList.add('no-grid');
     }
     
+    // Gap changed: the selection overlay caches the grid metrics
+    if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+        window.JTEdit.currentSelectionManager.onLayoutChange();
+    }
+
     // Save preference to localStorage
     localStorage.setItem('gridEnabled', gridEnabled);
 }
@@ -1860,6 +1922,11 @@ function toggleLed() {
 
     ledEnabled = ledToggle.checked;
     pixelCanvas.classList.toggle('led', ledEnabled);
+
+    // Padding changed: the selection overlay caches the grid metrics
+    if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+        window.JTEdit.currentSelectionManager.onLayoutChange();
+    }
 
     localStorage.setItem('ledEnabled', ledEnabled);
 }
@@ -1906,20 +1973,23 @@ function selectForegroundColor() {
 
 function selectBackgroundColor() {
     if (colorFormat === '24bit') {
-        // For 24-bit mode, create temporary color picker for background
-        const tempColorPicker = document.createElement('input');
-        tempColorPicker.type = 'color';
-        tempColorPicker.value = rtmouseBtnColor;
-        tempColorPicker.style.display = 'none';
-        document.body.appendChild(tempColorPicker);
-        
-        tempColorPicker.addEventListener('change', function() {
-            rtmouseBtnColor = this.value;
-            updateColorPreviews();
-            document.body.removeChild(tempColorPicker);
-        });
-        
-        tempColorPicker.click();
+        // For 24-bit mode, use one hidden colour input for the background
+        let picker = document.getElementById('bgColorInput');
+        if (!picker) {
+            picker = document.createElement('input');
+            picker.type = 'color';
+            picker.id = 'bgColorInput';
+            picker.style.display = 'none';
+            picker.setAttribute('aria-hidden', 'true');
+            picker.tabIndex = -1;
+            picker.addEventListener('change', function() {
+                rtmouseBtnColor = this.value;
+                updateColorPreviews();
+            });
+            document.body.appendChild(picker);
+        }
+        picker.value = rtmouseBtnColor;
+        picker.click();
     } else {
         // For 3-bit mode, cycle through colors for background
         changermbColor();
@@ -2119,37 +2189,54 @@ function swapColors() {
       // Function to draw pixel colors while dragging mouse
         function togglePixel(row, col) {
             if (mousebtn_Gbl==0 || mousebtn_Gbl==2){
-                const oldColor = pixelArray[row][col];
                 const newColor = mousebtn_Gbl==0 ? selectedColor : rtmouseBtnColor;
-                
-                if (oldColor !== newColor) {
-                    // Mark as dragging and track the change
-                    isDragging = true;
-                    
-                    // Check if we already have a change for this pixel in the current drag
-                    const existingChangeIndex = pendingPixelChanges.findIndex(
-                        change => change.row === row && change.col === col
-                    );
-                    
-                    if (existingChangeIndex >= 0) {
-                        // Update the new color for existing change
-                        pendingPixelChanges[existingChangeIndex].newColor = newColor;
-                    } else {
-                        // Add new pixel change
-                        pendingPixelChanges.push({row, col, oldColor, newColor});
-                    }
-                    
-                    // Apply the change visually to the one cell (a full drawPixels()
-                    // rebuild per mousemove is far too slow on 32x192 panels)
-                    pixelArray[row][col] = newColor;
-                    const cell = document.getElementById("pixelCanvas").children[row * pixelWidth + col];
-                    if (cell) {
-                        cell.style.backgroundColor = newColor;
-                        cell.style.color = newColor;
-                    } else {
-                        drawPixels();
-                    }
+                // Fill the cells between the previous sample and this one so a fast
+                // stroke leaves no gaps
+                const from = lastPaintCell;
+                lastPaintCell = { row, col };
+                if (from && (from.row !== row || from.col !== col)) {
+                    forEachCellOnLine(from.row, from.col, row, col, (r, c) => paintCellPending(r, c, newColor));
+                } else {
+                    paintCellPending(row, col, newColor);
                 }
+            }
+        }
+
+        // Record one cell of the current stroke and paint it on screen without a
+        // full drawPixels() rebuild (far too slow on 32x192 panels)
+        function paintCellPending(row, col, newColor) {
+            const frame = pixelArrayFrames[currentFrameIndex];
+            if (!frame[row] || frame[row][col] === undefined) return;
+            const oldColor = frame[row][col];
+            if (oldColor === newColor) return;
+            isDragging = true;
+            const existing = pendingPixelChanges.find(change => change.row === row && change.col === col);
+            if (existing) {
+                existing.newColor = newColor;
+            } else {
+                pendingPixelChanges.push({row, col, oldColor, newColor});
+            }
+            frame[row][col] = newColor;
+            const cell = document.getElementById("pixelCanvas").children[row * pixelWidth + col];
+            if (cell) {
+                cell.style.backgroundColor = newColor;
+                cell.style.color = newColor;
+            } else {
+                drawPixels();
+            }
+        }
+
+        // Bresenham walk from (r0,c0) to (r1,c1), calling fn for every cell
+        function forEachCellOnLine(r0, c0, r1, c1, fn) {
+            const dr = Math.abs(r1 - r0), dc = Math.abs(c1 - c0);
+            const sr = r0 < r1 ? 1 : -1, sc = c0 < c1 ? 1 : -1;
+            let err = dc - dr, r = r0, c = c0;
+            for (;;) {
+                fn(r, c);
+                if (r === r1 && c === c1) break;
+                const e2 = 2 * err;
+                if (e2 > -dr) { err -= dr; c += sc; }
+                if (e2 < dc) { err += dc; r += sr; }
             }
         }
 
@@ -2168,7 +2255,7 @@ function swapColors() {
                 '#FFFFFF': '111' // White
             };
 
-            currentColor = colorMap[color];
+            currentColor = colorMap[color] || '000'; // unknown (non-palette) colours read as black
             const binaryValue = currentColor.substring(position, position + 1) ?? '0'
 
             return binaryValue
@@ -2228,7 +2315,7 @@ function swapColors() {
       }
         pixelArrayFrames.length--;                      //delete last frame
         totalFrames--;
-        currentFrameIndex=totalFrames-1;
+        currentFrameIndex=Math.min(currentFrameIndex, totalFrames-1);
         drawPixels();setTimeout(updateFrameDisplay,100);
       }                              
   }
