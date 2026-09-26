@@ -17,10 +17,19 @@ This is a static web application with no build process:
 ## Architecture
 
 ### Core Files
-- `index.html` - Single page application entry point
+- `index.html` - Single page application entry point (top bar, tool rail, canvas area, right panel, timeline, status bar)
+- `styles.css` - Design tokens and all styling (dark workspace; LED preview and timeline styles live here)
 - `app.js` - Main application logic (event handling, pixel management, file I/O)
+- `ui.js` - UI glue for the chrome: 3-bit palette swatches, status bar readouts, legends (no editor state of its own)
+- `timeline.js` - Animation frame thumbnails: click to select, drag to reorder (calls `selectFrame`/`moveFrame` in app.js)
+- `scaling.js` - Canvas scaling algorithms and the Resize canvas dialog
+- `selection.js` - Rectangle selection, move, copy/cut/paste
+- `history.js` - Undo/redo command stack
+- `keyboard-shortcuts.js` - Keyboard shortcut registry (drives the DOM controls by id)
 - `FileSaver.js` - Save functionality for JT files and PNG export
 - `saveas.js` - FileSaver.js library for browser file downloads
+
+Element ids in `index.html` are the contract between the markup and the scripts: `app.js` and `keyboard-shortcuts.js` look controls up by id, so keep ids when restructuring markup. `drawPixels()` calls `window.JTEdit.ui.afterDraw()` after every redraw; `ui.js` and `timeline.js` refresh from that hook.
 
 ### Key Data Structures
 
@@ -62,6 +71,8 @@ JT-Edit supports two color modes:
 3. **Canvas Rendering**: Uses CSS Grid with divs, not HTML5 Canvas API
 4. **File Format**: JT format is proprietary - maintain compatibility with CoolLED1248
 5. **Color Constraints**: Respect current color mode - 3-bit (8 colors) or 24-bit (full color)
+6. **No CDN dependencies for function**: icons are inline SVG; Google Fonts is progressive (system fonts offline)
+7. **Paint performance**: never add `:hover`, transforms or shadows to `.pixel` unconditionally; a 32x192 panel is 6,144 cells and drag painting updates one cell at a time
 
 ## Testing Approach
 

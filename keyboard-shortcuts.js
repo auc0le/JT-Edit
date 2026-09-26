@@ -20,6 +20,19 @@ class KeyboardShortcuts {
 
         // Build shortcut key string
         const key = this.buildKey(event);
+
+        // Let the focused control keep its native keys
+        const target = document.activeElement;
+        const tag = target ? target.tagName.toLowerCase() : '';
+        const typing = tag === 'textarea' ||
+            (tag === 'input' && !['checkbox', 'radio', 'button', 'range', 'color', 'file'].includes(target.type));
+        if (typing) return;
+        if (tag === 'select' && !(event.ctrlKey || event.metaKey)) return;
+        if ((key === 'space' || key === 'enter') &&
+            (tag === 'button' || tag === 'a' || tag === 'input' || tag === 'select' ||
+             (target && target.getAttribute('role') === 'button'))) return;
+        // Dialogs handle their own keys (they close on Escape themselves)
+        if (document.querySelector('.modal--open')) return;
         
         // Check if shortcut exists
         if (this.shortcuts.has(key)) {
@@ -35,10 +48,14 @@ class KeyboardShortcuts {
         const parts = [];
         if (event.ctrlKey || event.metaKey) parts.push('ctrl');
         if (event.altKey) parts.push('alt');
-        if (event.shiftKey) parts.push('shift');
         
         // Get the key
         let key = event.key.toLowerCase();
+
+        // '?' and '+' are typed with Shift on most layouts: the character already
+        // carries the shift, so only letters/digits/named keys get the prefix
+        const shiftedChar = key.length === 1 && !/[a-z0-9]/.test(key);
+        if (event.shiftKey && !shiftedChar) parts.push('shift');
         
         // Normalize special keys
         const keyMap = {
@@ -84,8 +101,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Animation shortcuts
     shortcuts.register('space', () => {
+        const mode = document.getElementById('modeDropdown')?.value;
         const playPauseBtn = document.getElementById('playPauseButton');
-        if (playPauseBtn && !playPauseBtn.disabled) {
+        if (mode === 'animation' && playPauseBtn && !playPauseBtn.disabled) {
             playPauseBtn.click();
         }
     });
@@ -189,12 +207,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Animation control shortcuts
     shortcuts.register('escape', () => {
+        // Stop playback, then clear the selection
         const mode = document.getElementById('modeDropdown')?.value;
         if (mode === 'animation') {
             const playPauseBtn = document.getElementById('playPauseButton');
             if (playPauseBtn && playPauseBtn.querySelector('i').classList.contains('fa-pause')) {
                 playPauseBtn.click(); // Stop animation
             }
+        }
+        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            window.JTEdit.currentSelectionManager.clear();
         }
     });
     
@@ -232,6 +254,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (gridToggle) {
             gridToggle.checked = !gridToggle.checked;
             gridToggle.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // LED preview toggle
+    shortcuts.register('l', () => {
+        const ledToggle = document.getElementById('ledToggle');
+        if (ledToggle) {
+            ledToggle.checked = !ledToggle.checked;
+            ledToggle.dispatchEvent(new Event('change'));
         }
     });
     
@@ -388,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     shortcuts.register('ctrl+a', () => {
         // Select all - need to access the selection manager from global scope
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            if (window.currentTool !== 'select-rect') document.getElementById('selectRectTool')?.click();
             window.JTEdit.currentSelectionManager.selectAll(
                 parseInt(document.getElementById('sizeDropdown').value.split('x')[0]),
                 parseInt(document.getElementById('sizeDropdown').value.split('x')[1])
@@ -395,52 +427,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    shortcuts.register('escape', () => {
-        // Clear selection or cancel current tool operation
-        if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-            window.JTEdit.currentSelectionManager.clear();
-        }
-    });
+    // (Escape is registered once, above: stops playback and clears the selection)
     
     // Copy/Cut/Paste shortcuts
     shortcuts.register('ctrl+c', () => {
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
+            const pixelArray = pixelArrayFrames[currentFrameIndex];
             window.JTEdit.currentSelectionManager.copy(pixelArray);
         }
     });
     
     shortcuts.register('ctrl+x', () => {
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
-            const backgroundColor = window.rtmouseBtnColor || '#000000';
+            const pixelArray = pixelArrayFrames[currentFrameIndex];
+            const backgroundColor = rtmouseBtnColor || '#000000';
             window.JTEdit.currentSelectionManager.cut(pixelArray, backgroundColor);
+            drawPixels();
+            updateTextDisplay();
         }
     });
     
     shortcuts.register('ctrl+v', () => {
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
-            const pixelArray = window.pixelArrayFrames[window.currentFrameIndex];
+            if (window.currentTool !== 'select-rect') document.getElementById('selectRectTool')?.click();
+            const pixelArray = pixelArrayFrames[currentFrameIndex];
             // Paste at center of canvas by default
-            const centerRow = Math.floor(window.pixelHeight / 2);
-            const centerCol = Math.floor(window.pixelWidth / 2);
+            const centerRow = Math.floor(pixelHeight / 2);
+            const centerCol = Math.floor(pixelWidth / 2);
             window.JTEdit.currentSelectionManager.paste(pixelArray, centerRow, centerCol);
+            drawPixels();
+            updateTextDisplay();
         }
     });
     
-    // Disable shortcuts when typing in input fields
-    const inputs = ['input', 'textarea', 'select'];
-    document.addEventListener('focusin', (e) => {
-        if (inputs.includes(e.target.tagName.toLowerCase())) {
-            shortcuts.disable();
-        }
-    });
-    
-    document.addEventListener('focusout', (e) => {
-        if (inputs.includes(e.target.tagName.toLowerCase())) {
-            shortcuts.enable();
-        }
-    });
+    // Typing in a field, or holding focus on a select or button, is handled per key
+    // in KeyboardShortcuts.handleKeyDown.
     
     // Export for potential use in other modules
     window.JTEdit = window.JTEdit || {};
