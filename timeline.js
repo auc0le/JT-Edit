@@ -109,6 +109,7 @@
                 btn._frame = frame;
             }
             btn.classList.toggle('is-current', current);
+            btn.tabIndex = current ? 0 : -1;   // one tab stop for the strip
             btn.setAttribute('aria-selected', current ? 'true' : 'false');
             btn.setAttribute('aria-label', `Frame ${i + 1} of ${count}${current ? ', current' : ''}`);
             btn.lastChild.textContent = String(i + 1);

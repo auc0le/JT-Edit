@@ -543,7 +543,7 @@ class ScalingPreviewDialog {
                             <label for="scalingResizeMode">Fit</label>
                             <select id="scalingResizeMode" class="control-input">
                                 <option value="stretch" selected>Stretch to fill</option>
-                                <option value="keep-size">Fit inside and anchor</option>
+                                <option value="keep-size">Keep aspect ratio (anchor)</option>
                             </select>
                         </div>
                         

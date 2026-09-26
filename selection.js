@@ -415,8 +415,11 @@ class SelectionManager {
         this.isMoving = true;
         this.moveStartPos = { x: event.clientX, y: event.clientY };
         
-        // Store selection content and original bounds
+        // Store selection content and original bounds. The move works on the frame
+        // it started in even if playback or a key changes the current frame meanwhile.
         const pixelArray = this.getPixelArrayFromGlobal();
+        this.movePixelArray = pixelArray;
+        this.moveFrameIndex = (typeof currentFrameIndex !== 'undefined') ? currentFrameIndex : 0;
         if (pixelArray) {
             this.selectionData = this.getSelectedPixels(pixelArray);
             this.originalBounds = this.currentSelection.getBounds();
@@ -454,8 +457,14 @@ class SelectionManager {
         const metrics = this.renderer.calculateCanvasMetrics(this.pixelSize);
         const pixelSizeWithGap = this.pixelSize + metrics.gridGap;
         
-        const totalDeltaRows = Math.round(deltaY / pixelSizeWithGap);
-        const totalDeltaCols = Math.round(deltaX / pixelSizeWithGap);
+        let totalDeltaRows = Math.round(deltaY / pixelSizeWithGap);
+        let totalDeltaCols = Math.round(deltaX / pixelSizeWithGap);
+        
+        // A fast drag can jump past the edge: clamp so the selection lands on it
+        const dims = this.getCanvasDimensions();
+        const ob = this.originalBounds;
+        totalDeltaRows = Math.max(-ob.minRow, Math.min(totalDeltaRows, dims.height - 1 - ob.maxRow));
+        totalDeltaCols = Math.max(-ob.minCol, Math.min(totalDeltaCols, dims.width - 1 - ob.maxCol));
         
         // Calculate new position based on original bounds
         const newMinRow = this.originalBounds.minRow + totalDeltaRows;
@@ -492,7 +501,7 @@ class SelectionManager {
     showMovePreview(newMinRow, newMinCol) {
         if (!this.previewPixels || !this.selectionData) return;
         
-        const pixelArray = this.getPixelArrayFromGlobal();
+        const pixelArray = this.movePixelArray || this.getPixelArrayFromGlobal();
         if (!pixelArray) return;
         
         // Restore canvas to original state (before move started)
@@ -539,7 +548,7 @@ class SelectionManager {
         if (this.selectionData && this.originalBounds && this.previewPixels &&
             (this.moveDelta.rows !== 0 || this.moveDelta.cols !== 0)) {
             
-            const pixelArray = this.getPixelArrayFromGlobal();
+            const pixelArray = this.movePixelArray || this.getPixelArrayFromGlobal();
             if (pixelArray) {
                 // Collect all pixel changes for history using original state
                 const changes = [];
@@ -566,7 +575,7 @@ class SelectionManager {
                     const action = new window.JTEdit.History.PixelAction(
                         changes,
                         pixelArray,
-                        currentFrameIndex || 0
+                        this.moveFrameIndex || 0
                     );
                     action.description = 'Move Selection';
                     action.canMergeWith = function(otherAction) { return false; }; // Prevent merging
@@ -578,7 +587,7 @@ class SelectionManager {
             }
         } else if (this.previewPixels) {
             // If no movement occurred, restore original state
-            const pixelArray = this.getPixelArrayFromGlobal();
+            const pixelArray = this.movePixelArray || this.getPixelArrayFromGlobal();
             if (pixelArray) {
                 for (let row = 0; row < pixelArray.length; row++) {
                     for (let col = 0; col < pixelArray[row].length; col++) {
@@ -764,18 +773,37 @@ class SelectionManager {
     cut(pixelArray, backgroundColor = '#000000') {
         if (!this.copy(pixelArray)) return false;
         
-        // Clear selected pixels
+        // Clear selected pixels, as one undoable action
         const bounds = this.currentSelection.getBounds();
+        const changes = [];
         for (let row = bounds.minRow; row <= bounds.maxRow; row++) {
             for (let col = bounds.minCol; col <= bounds.maxCol; col++) {
-                if (this.currentSelection.contains(row, col)) {
-                    pixelArray[row][col] = backgroundColor;
+                if (this.currentSelection.contains(row, col) && pixelArray[row][col] !== backgroundColor) {
+                    changes.push({ row, col, oldColor: pixelArray[row][col], newColor: backgroundColor });
                 }
             }
         }
+        this.recordChanges(pixelArray, changes, 'Cut Selection');
         
         this.clear();
         return true;
+    }
+
+    // One history entry for a batch of cell changes (applied by the history manager)
+    recordChanges(pixelArray, changes, description) {
+        if (!changes.length) return;
+        if (window.JTEdit && window.JTEdit.currentHistoryManager && window.JTEdit.History) {
+            const action = new window.JTEdit.History.PixelAction(
+                changes,
+                pixelArray,
+                (typeof currentFrameIndex !== 'undefined') ? currentFrameIndex : 0
+            );
+            action.description = description;
+            action.canMergeWith = function() { return false; };
+            window.JTEdit.currentHistoryManager.execute(action);
+        } else {
+            changes.forEach(c => { pixelArray[c.row][c.col] = c.newColor; });
+        }
     }
 
     paste(pixelArray, targetRow, targetCol) {
@@ -785,13 +813,15 @@ class SelectionManager {
         const maxRow = pixelArray.length;
         const maxCol = pixelArray[0].length;
         
+        const changes = [];
         pixels.forEach(pixel => {
             const row = targetRow + pixel.row;
             const col = targetCol + pixel.col;
-            if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
-                pixelArray[row][col] = pixel.color;
+            if (row >= 0 && row < maxRow && col >= 0 && col < maxCol && pixelArray[row][col] !== pixel.color) {
+                changes.push({ row, col, oldColor: pixelArray[row][col], newColor: pixel.color });
             }
         });
+        this.recordChanges(pixelArray, changes, 'Paste');
         
         // Create selection around pasted area
         this.clear();

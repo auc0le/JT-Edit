@@ -62,6 +62,8 @@ var mousebtn_Gbl=-1;    //store mouse button event (-1 = none, 0 = right mouse b
 var isDragging = false;
 var pendingPixelChanges = [];
 var lastPaintCell = null;        // last cell painted in the current stroke (for gap filling)
+var strokeFrame = null;          // frame array the current stroke paints into (pinned at its first cell)
+var strokeFrameIndex = -1;
 
 // global vars for animation logic
 let pixelArrayFrames = [[]];
@@ -84,7 +86,7 @@ let recent3BitColors = []; // Array to store recently used colors in 3-bit mode
 
 // Function to convert RGB to hex
 function rgbToHex(r, g, b) {
-    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase()}`;
 }
 
 // Function to quantize color to 3-bit color space using Euclidean distance
@@ -191,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to handle play/pause/next button clicks
         function handleButtonClick(buttonId) {
+            commitPendingStroke(); // a stroke belongs to the frame it started on
             switch (buttonId) {
                 case "backButton":
                     // Handle back button click
@@ -241,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // clone and directional buttons
         document.getElementById('cloneFrameButton').addEventListener('click', function() {
             if (currentMode !== "animation") return;
+            commitPendingStroke();
             copyCurrentFrameToEnd();
             updateFrameDisplay();
             drawPixels();
@@ -412,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to handle color format change
         function handleColorFormatChange() {
+            commitPendingStroke();
             const colorFormatDropdown = document.getElementById("colorFormatDropdown");
             const oldFormat = colorFormat;
             colorFormat = colorFormatDropdown.value;
@@ -442,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     sync24BitPickerColor();
                 }
                 updateColorPreviews();
+                if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate(); // every frame changed
                 drawPixels();
                 updateTextDisplay();
             }
@@ -474,6 +480,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to handle paint bucket button click
         function fillCurrentFrame(color) {
+            commitPendingStroke();
+            const frame = pixelArrayFrames[currentFrameIndex];
+            if (frame.every(row => row.every(c => c === color))) return; // nothing to change
             // Fill in place through the history manager so the fill is one undo step and
             // earlier PixelActions (which hold the frame array reference) stay valid
             const action = new window.JTEdit.History.FillAction(
@@ -501,6 +510,11 @@ document.addEventListener('DOMContentLoaded', function() {
             isPlaying=false;
             const modeDropdown = document.getElementById("modeDropdown");
             currentMode = modeDropdown.value;
+            if (currentMode === "static" && currentFrameIndex !== 0) {
+                // Static mode edits and saves frame 0 only
+                commitPendingStroke();
+                currentFrameIndex = 0;
+            }
 
             // Toggle the visibility of the control buttons based on the mode
             const controlButtons = document.getElementById("controlButtons");
@@ -567,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
             currentFrameIndex = 0;
             totalFrames = 1;
             ///////////////////////
-            document.getElementById("totalFrames").innerText="1";document.getElementById("currentFrame").innerText="1"
+            commitPendingStroke();
             const sizeDropdown      = document.getElementById("sizeDropdown");
             const selectedSize      = sizeDropdown.value;
             const [height, width]   = selectedSize.split("x").map(Number);      //height & width were getting swapped here
@@ -585,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pixelArrayFrames[currentFrameIndex] = createPixelArray(height, width, rtmouseBtnColor);//use rtmouseBtnColor bg 
             historyManager.clear();   // earlier actions refer to the discarded array
             selectionManager.clear();
+            updateFrameDisplay();
             
             // Update pixel size input max based on new canvas size
             updatePixelSizeInputMax();
@@ -866,25 +881,35 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById("RMBpaintBucketButton").addEventListener("click", RMBhandlePaintBucket);
     
     //Event listeners for mouse buttons -- allows pixels to be drawn while holding mouse buttons
-    document.addEventListener("mouseup", function(){  
-        // If we were dragging, commit the pending pixel changes to history
-        if (isDragging && pendingPixelChanges.length > 0) {
+    // Commit the in-progress stroke (one PixelAction against the frame it started on).
+    // Called on mouseup and before anything that would change frames or history mid-stroke.
+    function commitPendingStroke() {
+        if (pendingPixelChanges.length > 0 && strokeFrame) {
             const action = new window.JTEdit.History.PixelAction(
                 pendingPixelChanges,
-                pixelArrayFrames[currentFrameIndex],
-                currentFrameIndex
+                strokeFrame,
+                strokeFrameIndex
             );
             historyManager.execute(action);
-            pendingPixelChanges = [];
             updateTextDisplay();
             if (window.JTEdit && window.JTEdit.ui && window.JTEdit.ui.afterDraw) {
                 window.JTEdit.ui.afterDraw();
             }
         }
-        isDragging = false;
+        pendingPixelChanges = [];
+        strokeFrame = null;
+        strokeFrameIndex = -1;
         lastPaintCell = null;
+        isDragging = false;
+    }
+    window.JTEdit.commitStroke = commitPendingStroke;
+
+    document.addEventListener("mouseup", function(){  
+        commitPendingStroke();
         mousebtn_Gbl=-1; 
     });
+    // Leaving the canvas ends the line so re-entering does not bridge the gap
+    document.getElementById("pixelCanvas").addEventListener("mouseleave", function(){ lastPaintCell = null; });
 
     // Event listener for custom color picker change
     customColorPicker.addEventListener('change', function() {
@@ -1079,17 +1104,26 @@ function loadPixelArrayFromJTFile(data) {
             console.error('Unsupported data type');
         }
         
+        // Both type fields follow the detected depth (a later mode switch saves the other kind)
+        graffitiType = aniType = (colorFormat === '24bit') ? 2 : 1;
+        // Keep the file's static metadata for the round trip
+        if (jsonData.data.mode !== undefined) mode = jsonData.data.mode;
+        if (jsonData.data.speed !== undefined) speed = jsonData.data.speed;
+        if (jsonData.data.stayTime !== undefined) stayTime = jsonData.data.stayTime;
+
         // Update the color format dropdown to match detected format
         document.getElementById("colorFormatDropdown").value = colorFormat;
         //update mode dropdown
         document.getElementById("modeDropdown").value=currentMode;handleModeChange();
         
         // A loaded file starts a fresh history; earlier actions refer to discarded arrays
+        commitPendingStroke();
         historyManager.clear();
         selectionManager.clear();
 
         // Apply responsive scaling for loaded file
         applyResponsiveScaling();
+        updateFrameDisplay();
         
         // Invalidate selection positioning cache when JT file loads with new dimensions
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
@@ -1145,6 +1179,7 @@ function loadPixelArrayFromJTFile(data) {
         }
 
         pixelArrayFrames[currentFrameIndex] = pixelArray;
+        commitPendingStroke();
         historyManager.clear();
         selectionManager.clear();
         
@@ -1245,6 +1280,7 @@ function loadPixelArrayFromJTFile(data) {
 
             function animate() {
                 if (isPlaying) {
+                    commitPendingStroke();
                     currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
                     drawPixels();
                     updateFrameDisplay();
@@ -1275,7 +1311,7 @@ function loadPixelArrayFromJTFile(data) {
         
         const undoCount = state.history.undoStack.length;
         const redoCount = state.history.redoStack.length;
-        statusSpan.textContent = undoCount > 0 ? `${undoCount} actions` : 'No actions';
+        statusSpan.textContent = undoCount === 0 ? 'No actions' : (undoCount === 1 ? '1 action' : `${undoCount} actions`);
     }
     
     // Tool Management Functions
@@ -1291,7 +1327,9 @@ function loadPixelArrayFromJTFile(data) {
         
         // Initialize undo/redo buttons
         document.getElementById('undoButton').addEventListener('click', () => {
+            commitPendingStroke();
             if (historyManager.undo()) {
+                if (colorFormat === '3bit') convertPixelArrayFormat('24bit', '3bit'); // replayed 24-bit colours
                 selectionManager.clear();
                 if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate();
                 drawPixels();
@@ -1300,7 +1338,9 @@ function loadPixelArrayFromJTFile(data) {
         });
         
         document.getElementById('redoButton').addEventListener('click', () => {
+            commitPendingStroke();
             if (historyManager.redo()) {
+                if (colorFormat === '3bit') convertPixelArrayFormat('24bit', '3bit');
                 selectionManager.clear();
                 if (window.JTEdit.timeline) window.JTEdit.timeline.invalidate();
                 drawPixels();
@@ -1351,9 +1391,12 @@ function loadPixelArrayFromJTFile(data) {
         } else {
             [newHeight, newWidth] = sizeDropdown.value.split("x").map(Number);
         }
-        // Size presets only: keep format in step with the size (16x64 panels use v2)
-        selectedFormat = sizeDropdown.value === "16x64" ? "v2" : "v1";
-        document.getElementById("formatDropdown").value = selectedFormat;
+        // Size presets only: keep the JT format in step with the size (16x64 panels use v2)
+        if (selectedFormat !== "png") {
+            selectedFormat = sizeDropdown.value === "16x64" ? "v2" : "v1";
+            document.getElementById("formatDropdown").value = selectedFormat;
+        }
+        commitPendingStroke();
 
         if (newWidth === pixelWidth && newHeight === pixelHeight) {
             return; // nothing to scale (EPX/bilinear would otherwise alter the pixels)
@@ -1418,6 +1461,7 @@ function loadPixelArrayFromJTFile(data) {
         if (window.currentTool === 'paint') {
             // Original paint functionality with history tracking
             const button = event.button || (event.which - 1);
+            if (button !== 0 && button !== 2) return; // middle/side buttons do not paint
             const oldColor = pixelArrayFrames[currentFrameIndex][row][col];
             const newColor = button === 0 ? selectedColor : rtmouseBtnColor;
             
@@ -2205,7 +2249,11 @@ function swapColors() {
         // Record one cell of the current stroke and paint it on screen without a
         // full drawPixels() rebuild (far too slow on 32x192 panels)
         function paintCellPending(row, col, newColor) {
-            const frame = pixelArrayFrames[currentFrameIndex];
+            if (!strokeFrame) {
+                strokeFrame = pixelArrayFrames[currentFrameIndex];
+                strokeFrameIndex = currentFrameIndex;
+            }
+            const frame = strokeFrame;
             if (!frame[row] || frame[row][col] === undefined) return;
             const oldColor = frame[row][col];
             if (oldColor === newColor) return;
@@ -2276,6 +2324,7 @@ function swapColors() {
   
   // Move frame at index `from` to index `to` (0-based). Used by the timeline drag reorder.
   function moveFrame(from, to){
+    if (window.JTEdit.commitStroke) window.JTEdit.commitStroke();
     if (!Array.isArray(pixelArrayFrames)) return false;
     const n = pixelArrayFrames.length;
     if (from === to || from < 0 || to < 0 || from >= n || to >= n) return false;
@@ -2298,6 +2347,7 @@ function swapColors() {
   // Select a frame by index (0-based). Used by the timeline.
   function selectFrame(index){
     if (index < 0 || index >= totalFrames || index === currentFrameIndex) return false;
+    if (window.JTEdit.commitStroke) window.JTEdit.commitStroke();
     currentFrameIndex = index;
     drawPixels();
     updateFrameDisplay();
@@ -2307,6 +2357,7 @@ function swapColors() {
 
   function deleteFrame(){
     var i,j
+    if (window.JTEdit.commitStroke) window.JTEdit.commitStroke();
     if (totalFrames>1){                                 //only delete if frames > 1
       if (currentFrameIndex<totalFrames-1){             //if not the last frame, swap everyone down
         for (i=currentFrameIndex;i<totalFrames-1;i++){  //-1, since last one will be deleted 

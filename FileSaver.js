@@ -9,19 +9,16 @@
         saveAs(blob, fileName);
       }else{
         if (currentMode == 'static'){
-          savePixelArrayAsImage(imageFileName);
+          savePixelArrayAsImage(imageFileName, currentFrameIndex);
         }else{
-          var tempFrameIndex = currentFrameIndex
-          for (var i=0;i<totalFrames;i++){
-            currentFrameIndex=i
-            if (i<10){
-              savePixelArrayAsImage(animationFileName.split(".")[0]+"_0"+i.toString()+"."+animationFileName.split(".")[1]);
-            }else{
-              savePixelArrayAsImage(animationFileName.split(".")[0]+"_"+i.toString()+"."+animationFileName.split(".")[1]);
-            }//i
+          // One PNG per frame, spaced out so the browser accepts every download
+          const base = animationFileName.split(".")[0];
+          const ext = animationFileName.split(".")[1];
+          for (let i=0;i<totalFrames;i++){
+            const name = base + "_" + (i < 10 ? "0" : "") + i.toString() + "." + ext;
+            setTimeout(() => savePixelArrayAsImage(name, i), i * 120);
           }//for
         }//endif
-        currentFrameIndex = tempFrameIndex
       }//png format
     }//saveToFile
 
@@ -34,7 +31,10 @@
         // Generate Type 2 (24-bit RGB) data array
         graffitiDataArray = generateType2DataArray();
       } else {
-        // Generate Type 1 (3-bit indexed) data array using existing logic
+        // Generate Type 1 (3-bit indexed) data array using existing logic.
+        // The bit-plane arrays are rebuilt from the live frames only (stale entries
+        // from a previously loaded or deleted frame would corrupt the file).
+        redBinaryArray.length = 0; greenBinaryArray.length = 0; blueBinaryArray.length = 0;
         var tempFrameIndex = currentFrameIndex
         if (currentMode == "static") {
           currentFrameIndex=0;updateTextDisplay();
@@ -102,8 +102,9 @@
 
     }
 // Function to save pixel array as image
-function savePixelArrayAsImage(fn) {
+function savePixelArrayAsImage(fn, frameIndex) {
   var row,col,i,j
+  if (frameIndex === undefined) frameIndex = currentFrameIndex;
 
   var tempCanvas = document.createElement('canvas');
   var tempCtx = tempCanvas.getContext('2d');
@@ -113,7 +114,7 @@ function savePixelArrayAsImage(fn) {
   var imgData = tempCtx.createImageData(tempCanvas.width, tempCanvas.height);
 
   var dataIndex=0;
-  pixelArray = pixelArrayFrames[currentFrameIndex]
+  var pixelArray = pixelArrayFrames[frameIndex]
 
   //populate RGBA imgData[width:w, height:h, data:red,grn,blu,alph].data array from pixelArray[row][col]
   for (row=0;row<pixelArray.length;row++){

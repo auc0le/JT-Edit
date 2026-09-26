@@ -497,6 +497,7 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     justify-content: center;
 }
 .stepper__btn:hover:not(:disabled) { background: var(--raised); color: var(--text); }
+.stepper__btn:focus-visible, .stepper__action:focus-visible { outline-offset: -2px; }
 .stepper__value {
     width: 52px;
     height: 30px;
@@ -890,7 +891,9 @@ input[type="number"].field { -moz-appearance: textfield; appearance: textfield; 
     flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
-    padding: 4px 2px;           /* room for the focus ring and drop markers */
+    scrollbar-gutter: stable;   /* the bar's appearance must not change the timeline height */
+    scrollbar-width: thin;
+    padding: 6px 10px;          /* room for the focus ring and drop markers */
 }
 .frame-thumb {
     position: relative;
@@ -1167,9 +1170,10 @@ select.control-input {
     .dpad__btn { width: 32px; height: 32px; }
 }
 @media (max-width: 720px) {
-    .workspace { flex-direction: column; }
-    .centre { flex: 1 1 auto; min-height: 0; }
-    .canvas-area { min-height: 140px; }
+    /* Phone widths: one scrolling column (rail, canvas, timeline, status, panel) */
+    .workspace { flex-direction: column; overflow-y: auto; }
+    .centre { flex: 0 0 auto; min-height: 0; }
+    .canvas-area { flex: 0 0 auto; height: 240px; }
     .rail {
         width: auto;
         flex-direction: row;
@@ -1183,7 +1187,8 @@ select.control-input {
     .panel {
         width: auto;
         flex: 0 0 auto;
-        max-height: 40vh;
+        max-height: none;
+        overflow: visible;
         border-left: 0;
         border-top: 1px solid var(--hairline);
     }

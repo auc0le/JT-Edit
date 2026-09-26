@@ -29,9 +29,10 @@ class KeyboardShortcuts {
         if (typing) return;
         if (tag === 'select' && !(event.ctrlKey || event.metaKey)) return;
         if ((key === 'space' || key === 'enter') &&
-            (tag === 'button' || tag === 'a' || (target && target.getAttribute('role') === 'button'))) return;
-        // Behind an open dialog only Escape gets through
-        if (key !== 'escape' && document.querySelector('.modal--open')) return;
+            (tag === 'button' || tag === 'a' || tag === 'input' || tag === 'select' ||
+             (target && target.getAttribute('role') === 'button'))) return;
+        // Dialogs handle their own keys (they close on Escape themselves)
+        if (document.querySelector('.modal--open')) return;
         
         // Check if shortcut exists
         if (this.shortcuts.has(key)) {
@@ -418,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     shortcuts.register('ctrl+a', () => {
         // Select all - need to access the selection manager from global scope
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            if (window.currentTool !== 'select-rect') document.getElementById('selectRectTool')?.click();
             window.JTEdit.currentSelectionManager.selectAll(
                 parseInt(document.getElementById('sizeDropdown').value.split('x')[0]),
                 parseInt(document.getElementById('sizeDropdown').value.split('x')[1])
@@ -447,6 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     shortcuts.register('ctrl+v', () => {
         if (window.JTEdit && window.JTEdit.currentSelectionManager) {
+            if (window.currentTool !== 'select-rect') document.getElementById('selectRectTool')?.click();
             const pixelArray = pixelArrayFrames[currentFrameIndex];
             // Paste at center of canvas by default
             const centerRow = Math.floor(pixelHeight / 2);
